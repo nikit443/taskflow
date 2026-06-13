@@ -580,7 +580,7 @@ function App(){
 
   async function deleteEmployee(eid){
     setSaving(true);
-    const up={"users/"+eid:null};
+    const up={};up["users/"+eid]=null;
     Object.values(tasks).forEach(t=>{
       if(t.assignedTo&&t.assignedTo[eid])up["tasks/"+t.id+"/assignedTo/"+eid]=null;
       if(t.statuses&&t.statuses[eid])up["tasks/"+t.id+"/statuses/"+eid]=null;
