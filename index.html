@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- TaskFlow v5.0 - 20260613_145338 -->
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
@@ -78,7 +79,15 @@ let _dp=null;
 window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();_dp=e;setTimeout(()=>{if(_dp){const b=document.getElementById("ib");if(b)b.style.display="flex";}},5000);});
 window.addEventListener("appinstalled",()=>{_dp=null;});
 function installApp(){if(_dp){_dp.prompt();_dp.userChoice.then(()=>{_dp=null;const b=document.getElementById("ib");if(b)b.style.display="none";});}}
-if("serviceWorker" in navigator){navigator.serviceWorker.getRegistrations().then(rs=>rs.forEach(r=>r.unregister())).then(()=>navigator.serviceWorker.register("./sw.js").catch(()=>{}));}
+if("serviceWorker" in navigator){
+  // Kill ALL service workers and caches first
+  navigator.serviceWorker.getRegistrations().then(regs=>{
+    regs.forEach(r=>r.unregister());
+  });
+  caches.keys().then(keys=>keys.forEach(k=>caches.delete(k)));
+  // Re-register after short delay
+  setTimeout(()=>navigator.serviceWorker.register("./sw.js").catch(()=>{}), 1000);
+}
 </script>
 
 <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
