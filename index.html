@@ -462,39 +462,111 @@ function Reports({tasks,users,s}){
 }
 
 // ─── CALENDAR ─────────────────────────────────────────────────────────────────
-function Cal({tasks,s}){
+function Cal({tasks,users,s}){
   const [mo,setMo]=useState(new Date());
+  const [selected,setSelected]=useState(null); // {dateStr, tasks[]}
   const yr=mo.getFullYear(),mn=mo.getMonth();
   const first=new Date(yr,mn,1).getDay(),dim=new Date(yr,mn+1,0).getDate();
   const tArr=Object.values(tasks);
   const MONTHS=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-  function onDay(d){const ds=yr+"-"+String(mn+1).padStart(2,"0")+"-"+String(d).padStart(2,"0");return tArr.filter(t=>t.dueDate===ds||t.isDaily);}
   const now=new Date();
+
+  function tasksOnDay(d){
+    const ds=yr+"-"+String(mn+1).padStart(2,"0")+"-"+String(d).padStart(2,"0");
+    return tArr.filter(t=>t.dueDate===ds||t.isDaily);
+  }
+
+  function handleDayClick(d){
+    const ds=yr+"-"+String(mn+1).padStart(2,"0")+"-"+String(d).padStart(2,"0");
+    const dt=tasksOnDay(d);
+    setSelected(selected&&selected.dateStr===ds?null:{dateStr:ds,dayTasks:dt,day:d});
+  }
+
   return(
     <div style={s.card({marginBottom:14})}>
+      {/* Header */}
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
-        <button onClick={()=>setMo(new Date(yr,mn-1,1))} style={{...s.bo,padding:"4px 10px"}}>‹</button>
-        <span style={{fontWeight:700,color:s.txt}}>{MONTHS[mn]} {yr}</span>
-        <button onClick={()=>setMo(new Date(yr,mn+1,1))} style={{...s.bo,padding:"4px 10px"}}>›</button>
+        <button onClick={()=>{setMo(new Date(yr,mn-1,1));setSelected(null);}} style={{...s.bo,padding:"6px 14px",fontSize:16}}>‹</button>
+        <span style={{fontWeight:700,color:s.txt,fontSize:15}}>{MONTHS[mn]} {yr}</span>
+        <button onClick={()=>{setMo(new Date(yr,mn+1,1));setSelected(null);}} style={{...s.bo,padding:"6px 14px",fontSize:16}}>›</button>
       </div>
+
+      {/* Day headers */}
       <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:2,marginBottom:4}}>
-        {"SMTWTFS".split("").map((d,i)=><div key={i} style={{textAlign:"center",fontSize:10,color:s.ft,fontWeight:600,padding:"2px 0"}}>{d}</div>)}
+        {["Su","Mo","Tu","We","Th","Fr","Sa"].map((d,i)=>(
+          <div key={i} style={{textAlign:"center",fontSize:10,color:s.ft,fontWeight:700,padding:"2px 0"}}>{d}</div>
+        ))}
       </div>
-      <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:2}}>
+
+      {/* Days grid */}
+      <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:3}}>
         {Array(first).fill(null).map((_,i)=><div key={"e"+i}/>)}
         {Array(dim).fill(null).map((_,i)=>{
-          const d=i+1,dt=onDay(d);
-          const isTdy=now.getDate()===d&&now.getMonth()===mn&&now.getFullYear()===yr;
+          const d=i+1;
+          const dt=tasksOnDay(d);
+          const isToday=now.getDate()===d&&now.getMonth()===mn&&now.getFullYear()===yr;
+          const isSelected=selected&&selected.day===d;
+          const hasHigh=dt.some(t=>(t.priority||"medium")==="high");
+          const hasOverdue=dt.some(t=>!t.isDaily&&daysUntil(t.dueDate)<0);
           return(
-            <div key={d} style={{textAlign:"center",padding:"4px 2px",borderRadius:6,background:isTdy?PL:"transparent",border:isTdy?"1px solid "+P:"1px solid transparent"}}>
-              <span style={{fontSize:11,color:isTdy?PD:s.txt,fontWeight:isTdy?700:400}}>{d}</span>
-              {dt.length>0&&<div style={{display:"flex",justifyContent:"center",gap:1,marginTop:2}}>
-                {dt.slice(0,3).map((t,ti)=><div key={ti} style={{width:5,height:5,borderRadius:"50%",background:PRIO[t.priority||"medium"].c}}/>)}
-              </div>}
+            <div key={d} onClick={()=>handleDayClick(d)}
+              style={{textAlign:"center",padding:"5px 2px",borderRadius:7,cursor:dt.length>0?"pointer":"default",
+                background:isSelected?P:isToday?PL:"transparent",
+                border:isSelected?"1px solid "+P:isToday?"1px solid "+P+"66":"1px solid transparent",
+                transition:"background .15s"}}>
+              <span style={{fontSize:12,color:isSelected?"#fff":isToday?PD:s.txt,fontWeight:isToday||isSelected?700:400,display:"block"}}>{d}</span>
+              {dt.length>0&&(
+                <div style={{display:"flex",justifyContent:"center",gap:1,marginTop:2,flexWrap:"wrap"}}>
+                  {dt.slice(0,3).map((t,ti)=>(
+                    <div key={ti} style={{width:5,height:5,borderRadius:"50%",
+                      background:isSelected?"rgba(255,255,255,.8)":hasOverdue?RD:hasHigh?RD:PRIO[t.priority||"medium"].c}}/>
+                  ))}
+                  {dt.length>3&&<span style={{fontSize:8,color:isSelected?"#fff":s.ft}}>+{dt.length-3}</span>}
+                </div>
+              )}
             </div>
           );
         })}
       </div>
+
+      {/* Selected day tasks panel */}
+      {selected&&(
+        <div style={{marginTop:14,borderTop:"1px solid "+s.br,paddingTop:12}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+            <p style={{margin:0,fontWeight:700,fontSize:13,color:s.txt}}>
+              {MONTHS[mn]} {selected.day} — {selected.dayTasks.length} task{selected.dayTasks.length!==1?"s":""}
+            </p>
+            <button onClick={()=>setSelected(null)} style={{background:"none",border:"none",color:s.ft,cursor:"pointer",fontSize:18,padding:"0 4px"}}>×</button>
+          </div>
+          {selected.dayTasks.length===0?(
+            <p style={{fontSize:13,color:s.ft,textAlign:"center",padding:"10px 0"}}>No tasks on this day</p>
+          ):(
+            selected.dayTasks.map(t=>{
+              const r=getRl(t.dueDate,t.isDaily);
+              const pri=PRIO[t.priority||"medium"];
+              const assignedNames=t.assignedTo?Object.keys(t.assignedTo).map(id=>users[id]?users[id].name:"?").join(", "):"";
+              return(
+                <div key={t.id} style={{padding:"10px 12px",background:s.bg,borderRadius:9,marginBottom:8,
+                  borderLeft:"3px solid "+r.c}}>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:8}}>
+                    <div style={{flex:1}}>
+                      <p style={{margin:0,fontWeight:700,fontSize:13,color:s.txt}}>{t.title}</p>
+                      {t.desc&&<p style={{margin:"3px 0 0",fontSize:12,color:s.mt,lineHeight:1.4}}>{t.desc}</p>}
+                      {assignedNames&&<p style={{margin:"3px 0 0",fontSize:11,color:s.ft}}>👤 {assignedNames}</p>}
+                    </div>
+                    <div style={{display:"flex",gap:4,flexShrink:0,flexWrap:"wrap",justifyContent:"flex-end"}}>
+                      <span style={{display:"inline-block",padding:"2px 7px",borderRadius:20,fontSize:10,fontWeight:700,color:r.c,background:r.b}}>{r.t}</span>
+                      <span style={{display:"inline-block",padding:"2px 7px",borderRadius:20,fontSize:10,fontWeight:700,color:pri.c,background:pri.b}}>{pri.l}</span>
+                      {t.isDaily&&<span style={{display:"inline-block",padding:"2px 7px",borderRadius:20,fontSize:10,fontWeight:700,color:BD,background:BL}}>Daily</span>}
+                      {t.category&&t.category!=="General"&&<span style={{display:"inline-block",padding:"2px 7px",borderRadius:20,fontSize:10,fontWeight:700,color:PD,background:PL}}>{t.category}</span>}
+                    </div>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -537,7 +609,19 @@ function App(){
 
   useEffect(()=>{
     const to=setTimeout(()=>{if(!ready){setConnErr(true);hideSplash();setReady(true);}},15000);
-    const u1=dbWatch("users",v=>{setUsers(v||{});});
+    const u1=dbWatch("users",v=>{
+      const fresh=v||{};
+      setUsers(fresh);
+      // Auto-restore session if stored
+      const saved=localStorage.getItem("tf_session");
+      if(saved&&!me){
+        try{
+          const sess=JSON.parse(saved);
+          const found=Object.values(fresh).find(u=>u.id===sess.id&&u.active!==false);
+          if(found) setMe(found);
+        }catch(e){localStorage.removeItem("tf_session");}
+      }
+    });
     const u2=dbWatch("tasks",v=>{setTasks(v||{});clearTimeout(to);setReady(true);hideSplash();});
     const u3=dbWatch("notifications",v=>setNotifs(v||{}));
     return()=>{u1();u2();u3();clearTimeout(to);};
@@ -550,10 +634,11 @@ function App(){
     if(!u){setLoginErr("Wrong username or password.");return;}
     if(!u.active){setLoginErr("Account deactivated.");return;}
     setMe(u);setLoginErr("");
+    localStorage.setItem("tf_session", JSON.stringify({id:u.id,username:u.username,role:u.role}));
     const up={};Object.entries(notifs).filter(([,n])=>n.userId===u.id&&!n.read).forEach(([id])=>up["notifications/"+id+"/read"]=true);
     if(Object.keys(up).length)dbPatch(up).catch(()=>{});
   }
-  function logout(){setMe(null);setForm({u:"",p:""});setTab("today");}
+  function logout(){setMe(null);setForm({u:"",p:""});setTab("today");localStorage.removeItem("tf_session");}
 
   async function markDone(tid,eid){setSaving(true);await dbUpd("tasks/"+tid+"/statuses/"+eid,{state:"pending",comment:"",dailyDate:today()});const t=tasks[tid],e=users[eid];if(t&&e)await push("admin",e.name+' submitted "'+t.title+'" for approval.');setSaving(false);}
   async function approve(tid,eid){setSaving(true);await dbUpd("tasks/"+tid+"/statuses/"+eid,{state:"done",comment:"",dailyDate:today()});const t=tasks[tid];if(t)await push(eid,'✓ "'+t.title+'" was approved.');setSaving(false);}
@@ -694,7 +779,7 @@ function App(){
             ))}
           </div>
           <button onClick={()=>setShowCal(v=>!v)} style={{...s.bo,width:"100%",marginBottom:10,fontSize:13,padding:"8px"}}>📅 {showCal?"Hide":"Show"} Calendar</button>
-          {showCal&&<Cal tasks={Object.fromEntries(Object.entries(tasks).filter(([,t])=>t.assignedTo&&t.assignedTo[me.id]))} s={s}/>}
+          {showCal&&<Cal tasks={Object.fromEntries(Object.entries(tasks).filter(([,t])=>t.assignedTo&&t.assignedTo[me.id]))} users={users} s={s}/>}
         </div>
         <div style={{padding:"0 14px"}}>
           {tab==="today"&&(todays.length===0?<div style={{textAlign:"center",padding:"50px 0",color:s.ft}}><p style={{fontSize:38}}>🎉</p><p style={{marginTop:10}}>All caught up!</p></div>
@@ -735,7 +820,7 @@ function App(){
             </select>
           </div>
           <button onClick={()=>setShowCal(v=>!v)} style={{...s.bo,width:"100%",marginBottom:8,fontSize:13,padding:"8px"}}>📅 {showCal?"Hide":"Show"} Calendar</button>
-          {showCal&&<Cal tasks={tasks} s={s}/>}
+          {showCal&&<Cal tasks={tasks} users={users} s={s}/>}
           <div style={{display:"flex",justifyContent:"flex-end",marginBottom:10}}>
             <button style={s.bp} onClick={()=>{setFe("");setNt(emptyTask);setAddT(true);}}>+ Add task</button>
           </div>
