@@ -4,103 +4,82 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"/>
 
-<!-- PWA / install meta -->
+<!-- PWA manifest - real file, not blob -->
+<link rel="manifest" href="./manifest.json"/>
+
+<!-- Theme + status bar -->
 <meta name="theme-color" content="#7F77DD"/>
 <meta name="application-name" content="TaskFlow"/>
 <meta name="description" content="Assign, track and approve team tasks. Works offline."/>
 
-<!-- Android -->
+<!-- Android PWA -->
 <meta name="mobile-web-app-capable" content="yes"/>
 
-<!-- iOS -->
+<!-- iOS PWA -->
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
 <meta name="apple-mobile-web-app-title" content="TaskFlow"/>
-<link rel="apple-touch-icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxODAiIGhlaWdodD0iMTgwIiB2aWV3Qm94PSIwIDAgMTgwIDE4MCI+CiAgPHJlY3Qgd2lkdGg9IjE4MCIgaGVpZ2h0PSIxODAiIHJ4PSIzOSIgZmlsbD0iIzdGNzdERCIvPgogIDxwb2x5bGluZSBwb2ludHM9IjUwLDkzIDc5LDEyMCAxMjksNjIiIGZpbGw9Im5vbmUiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iMTAiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIvPgo8L3N2Zz4="/>
-
-<!-- Splash screen color for iOS -->
-<meta name="apple-mobile-web-app-status-bar-style" content="default"/>
+<link rel="apple-touch-icon" href="./icon-192.svg"/>
 
 <!-- Favicon -->
-<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxOTIiIGhlaWdodD0iMTkyIiB2aWV3Qm94PSIwIDAgMTkyIDE5MiI+CiAgPHJlY3Qgd2lkdGg9IjE5MiIgaGVpZ2h0PSIxOTIiIHJ4PSI0MiIgZmlsbD0iIzdGNzdERCIvPgogIDxwb2x5bGluZSBwb2ludHM9IjUzLDk5IDg0LDEyOCAxMzgsNjciIGZpbGw9Im5vbmUiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iMTEiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIvPgo8L3N2Zz4="/>
+<link rel="icon" type="image/svg+xml" href="./icon-192.svg"/>
 
-<!-- Title -->
 <title>TaskFlow</title>
 
 <style>
-  *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
-  html, body { margin:0; height:100%; overscroll-behavior:none; }
-  body { font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; background:#F7F7F8; }
-  #root { min-height:100vh; min-height:100dvh; }
-  /* iOS safe area support */
-  .safe-bottom { padding-bottom:env(safe-area-inset-bottom, 12px); }
+  *, *::before, *::after { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; overscroll-behavior: none; }
+  body { font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #F7F7F8; }
+  #root { min-height: 100vh; min-height: 100dvh; }
 </style>
 </head>
 <body>
 <div id="root"></div>
 
+<!-- Install banner (shown by JS after 3s on Android Chrome) -->
+<div id="install-banner" style="display:none; position:fixed; bottom:0; left:0; right:0;
+  background:#7F77DD; color:#fff; padding:14px 16px; z-index:9999;
+  align-items:center; justify-content:space-between; gap:12px;
+  box-shadow: 0 -2px 12px rgba(0,0,0,0.2);">
+  <div style="display:flex; align-items:center; gap:10px;">
+    <span style="font-size:26px;">✓</span>
+    <div>
+      <p style="margin:0; font-weight:700; font-size:14px;">Install TaskFlow</p>
+      <p style="margin:0; font-size:12px; opacity:.85;">Add to home screen for quick access</p>
+    </div>
+  </div>
+  <div style="display:flex; gap:8px; flex-shrink:0;">
+    <button onclick="installApp()"
+      style="background:#fff; color:#7F77DD; border:none; padding:8px 16px;
+      border-radius:8px; font-weight:700; font-size:13px; cursor:pointer;">
+      Install
+    </button>
+    <button onclick="document.getElementById('install-banner').style.display='none'"
+      style="background:rgba(255,255,255,0.2); color:#fff; border:none;
+      padding:8px 12px; border-radius:8px; font-size:16px; cursor:pointer;">
+      ✕
+    </button>
+  </div>
+</div>
+
 <script>
-// ── 1. Inject manifest via blob URL (works from file:// and any host) ──────────
-(function() {
-  const manifest = '{\n  "name": "TaskFlow - Team Task Manager",\n  "short_name": "TaskFlow",\n  "description": "Assign, track and approve team tasks. Works offline.",\n  "start_url": "./",\n  "scope": "./",\n  "display": "standalone",\n  "orientation": "portrait-primary",\n  "background_color": "#7F77DD",\n  "theme_color": "#7F77DD",\n  "lang": "en",\n  "categories": ["productivity", "business"],\n  "icons": [\n    { "src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxOTIiIGhlaWdodD0iMTkyIiB2aWV3Qm94PSIwIDAgMTkyIDE5MiI+CiAgPHJlY3Qgd2lkdGg9IjE5MiIgaGVpZ2h0PSIxOTIiIHJ4PSI0MiIgZmlsbD0iIzdGNzdERCIvPgogIDxwb2x5bGluZSBwb2ludHM9IjUzLDk5IDg0LDEyOCAxMzgsNjciIGZpbGw9Im5vbmUiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iMTEiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIvPgo8L3N2Zz4=", "sizes": "192x192", "type": "image/svg+xml", "purpose": "any" },\n    { "src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI1MTIiIGhlaWdodD0iNTEyIiB2aWV3Qm94PSIwIDAgNTEyIDUxMiI+CiAgPHJlY3Qgd2lkdGg9IjUxMiIgaGVpZ2h0PSI1MTIiIHJ4PSIxMTIiIGZpbGw9IiM3Rjc3REQiLz4KICA8cG9seWxpbmUgcG9pbnRzPSIxNDMsMjY2IDIyNSwzNDMgMzY4LDE3OSIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSIzMCIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+Cjwvc3ZnPg==", "sizes": "512x512", "type": "image/svg+xml", "purpose": "any" },\n    { "src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI1MTIiIGhlaWdodD0iNTEyIiB2aWV3Qm94PSIwIDAgNTEyIDUxMiI+CiAgPHJlY3Qgd2lkdGg9IjUxMiIgaGVpZ2h0PSI1MTIiIGZpbGw9IiM3Rjc3REQiLz4KICA8cG9seWxpbmUgcG9pbnRzPSIxNTMsMjc2IDIzNSwzNTMgMzU4LDE4OSIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSIzNSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+Cjwvc3ZnPg==", "sizes": "512x512", "type": "image/svg+xml", "purpose": "maskable" }\n  ],\n  "screenshots": [\n    { "src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI1MTIiIGhlaWdodD0iNTEyIiB2aWV3Qm94PSIwIDAgNTEyIDUxMiI+CiAgPHJlY3Qgd2lkdGg9IjUxMiIgaGVpZ2h0PSI1MTIiIHJ4PSIxMTIiIGZpbGw9IiM3Rjc3REQiLz4KICA8cG9seWxpbmUgcG9pbnRzPSIxNDMsMjY2IDIyNSwzNDMgMzY4LDE3OSIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSIzMCIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+Cjwvc3ZnPg==", "sizes": "512x512", "type": "image/svg+xml", "form_factor": "narrow" }\n  ]\n}';
-  const blob = new Blob([manifest], {type: 'application/manifest+json'});
-  const url  = URL.createObjectURL(blob);
-  const link = document.createElement('link');
-  link.rel   = 'manifest';
-  link.href  = url;
-  document.head.appendChild(link);
-})();
-
-// ── 2. Service Worker — full offline cache ─────────────────────────────────────
+// ── Register service worker (real file) ───────────────────────────────────────
 if ('serviceWorker' in navigator) {
-  const SW = `
-const CACHE = 'taskflow-v3';
-const ASSETS = [self.location.href];
-
-self.addEventListener('install', e => {
-  e.waitUntil(
-    caches.open(CACHE).then(c => c.addAll(ASSETS)).then(() => self.skipWaiting())
-  );
-});
-
-self.addEventListener('activate', e => {
-  e.waitUntil(
-    caches.keys()
-      .then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k))))
-      .then(() => self.clients.claim())
-  );
-});
-
-self.addEventListener('fetch', e => {
-  e.respondWith(
-    caches.match(e.request).then(cached => {
-      if (cached) return cached;
-      return fetch(e.request).then(resp => {
-        if (resp && resp.status === 200 && resp.type === 'basic') {
-          const clone = resp.clone();
-          caches.open(CACHE).then(c => c.put(e.request, clone));
-        }
-        return resp;
-      }).catch(() => cached);
-    })
-  );
-});
-  `;
-  const blob = new Blob([SW], {type:'application/javascript'});
-  navigator.serviceWorker.register(URL.createObjectURL(blob))
-    .catch(e => console.warn('SW:', e));
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js')
+      .then(r => console.log('SW registered', r.scope))
+      .catch(e => console.warn('SW failed:', e));
+  });
 }
 
-// ── 3. Install prompt — show "Add to Home Screen" banner ──────────────────────
-let deferredPrompt;
+// ── Install prompt ─────────────────────────────────────────────────────────────
+let deferredPrompt = null;
 window.addEventListener('beforeinstallprompt', e => {
   e.preventDefault();
   deferredPrompt = e;
-  // Show install banner after 3 seconds if not already installed
   setTimeout(() => {
-    if (deferredPrompt && document.getElementById('install-banner')) {
-      document.getElementById('install-banner').style.display = 'flex';
-    }
+    const b = document.getElementById('install-banner');
+    if (b && deferredPrompt) b.style.display = 'flex';
   }, 3000);
 });
 window.addEventListener('appinstalled', () => {
@@ -118,31 +97,6 @@ function installApp() {
   }
 }
 </script>
-
-<!-- Install banner (shows automatically on Android Chrome) -->
-<div id="install-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;
-  background:#7F77DD;color:#fff;padding:14px 16px;z-index:9999;
-  align-items:center;justify-content:space-between;gap:12px;
-  box-shadow:0 -2px 12px rgba(0,0,0,0.15);">
-  <div style="display:flex;align-items:center;gap:10px;">
-    <span style="font-size:24px;">✓</span>
-    <div>
-      <p style="margin:0;font-weight:700;font-size:14px;">Install TaskFlow</p>
-      <p style="margin:0;font-size:12px;opacity:.85;">Add to home screen for quick access</p>
-    </div>
-  </div>
-  <div style="display:flex;gap:8px;">
-    <button onclick="installApp()" style="background:#fff;color:#7F77DD;border:none;
-      padding:8px 16px;border-radius:8px;font-weight:700;font-size:13px;cursor:pointer;">
-      Install
-    </button>
-    <button onclick="document.getElementById('install-banner').style.display='none'"
-      style="background:rgba(255,255,255,0.2);color:#fff;border:none;
-      padding:8px 12px;border-radius:8px;font-size:13px;cursor:pointer;">
-      ✕
-    </button>
-  </div>
-</div>
 
 <!-- React + Babel for standalone operation (no build step needed) -->
 <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
