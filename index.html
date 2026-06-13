@@ -53,14 +53,16 @@ window.addEventListener('appinstalled',()=>{_dp=null;document.getElementById('in
 function installApp(){if(_dp){_dp.prompt();_dp.userChoice.then(()=>{_dp=null;document.getElementById('install-banner').style.display='none';});}}
 </script>
 
-<!-- Load React UMD first -->
+<!-- Firebase MUST load first -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+
+<!-- Then React -->
 <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
-<!-- Firebase loaded as UMD compat build -->
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+
 
 <script type="text/babel">
 // ─── FIREBASE CONFIG ─────────────────────────────────────────────────────────
@@ -303,16 +305,39 @@ function App() {
   // ── Bootstrap ──────────────────────────────────────────────────────────────
   useEffect(()=>{
     if (FIREBASE_CONFIG.apiKey === "YOUR_API_KEY") { setAppState("config_error"); return; }
-    try { getDB(); } catch(e) { setAppState("conn_error"); return; }
+    
+    // Test Firebase connection
+    const msg = document.getElementById("load-msg");
+    if(msg) msg.textContent = "Connecting to Firebase…";
+    
+    try { 
+      const testDB = getDB();
+      if(msg) msg.textContent = "Firebase connected, loading data…";
+    } catch(e) { 
+      console.error("Firebase init error:", e);
+      setAppState("conn_error"); 
+      return; 
+    }
+
+    // Set a timeout - if data doesn't load in 10s, show connection error
+    const timeout = setTimeout(()=>{
+      console.error("Firebase timeout - no data received after 10s");
+      setAppState("conn_error");
+    }, 10000);
 
     seedIfEmpty()
       .then(()=>{
-        const u1 = dbListen("users",        v => setUsers(v||{}));
-        const u2 = dbListen("tasks",        v => { setTasks(v||{}); setAppState("ready"); });
+        if(msg) msg.textContent = "Loading app…";
+        const u1 = dbListen("users",        v => { console.log("users:", v); setUsers(v||{}); });
+        const u2 = dbListen("tasks",        v => { console.log("tasks:", v); setTasks(v||{}); clearTimeout(timeout); setAppState("ready"); });
         const u3 = dbListen("notifications",v => setNotifs(v||{}));
-        return ()=>{ u1(); u2(); u3(); };
+        return ()=>{ u1(); u2(); u3(); clearTimeout(timeout); };
       })
-      .catch(()=>setAppState("conn_error"));
+      .catch(e=>{ 
+        console.error("seedIfEmpty error:", e); 
+        clearTimeout(timeout);
+        setAppState("conn_error"); 
+      });
   },[]);
 
   // ── Notify ─────────────────────────────────────────────────────────────────
