@@ -1,0 +1,899 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"/>
+
+<!-- PWA / install meta -->
+<meta name="theme-color" content="#7F77DD"/>
+<meta name="application-name" content="TaskFlow"/>
+<meta name="description" content="Assign, track and approve team tasks. Works offline."/>
+
+<!-- Android -->
+<meta name="mobile-web-app-capable" content="yes"/>
+
+<!-- iOS -->
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="TaskFlow"/>
+<link rel="apple-touch-icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxODAiIGhlaWdodD0iMTgwIiB2aWV3Qm94PSIwIDAgMTgwIDE4MCI+CiAgPHJlY3Qgd2lkdGg9IjE4MCIgaGVpZ2h0PSIxODAiIHJ4PSIzOSIgZmlsbD0iIzdGNzdERCIvPgogIDxwb2x5bGluZSBwb2ludHM9IjUwLDkzIDc5LDEyMCAxMjksNjIiIGZpbGw9Im5vbmUiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iMTAiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIvPgo8L3N2Zz4="/>
+
+<!-- Splash screen color for iOS -->
+<meta name="apple-mobile-web-app-status-bar-style" content="default"/>
+
+<!-- Favicon -->
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxOTIiIGhlaWdodD0iMTkyIiB2aWV3Qm94PSIwIDAgMTkyIDE5MiI+CiAgPHJlY3Qgd2lkdGg9IjE5MiIgaGVpZ2h0PSIxOTIiIHJ4PSI0MiIgZmlsbD0iIzdGNzdERCIvPgogIDxwb2x5bGluZSBwb2ludHM9IjUzLDk5IDg0LDEyOCAxMzgsNjciIGZpbGw9Im5vbmUiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iMTEiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIvPgo8L3N2Zz4="/>
+
+<!-- Title -->
+<title>TaskFlow</title>
+
+<style>
+  *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html, body { margin:0; height:100%; overscroll-behavior:none; }
+  body { font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; background:#F7F7F8; }
+  #root { min-height:100vh; min-height:100dvh; }
+  /* iOS safe area support */
+  .safe-bottom { padding-bottom:env(safe-area-inset-bottom, 12px); }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script>
+// ── 1. Inject manifest via blob URL (works from file:// and any host) ──────────
+(function() {
+  const manifest = '{\n  "name": "TaskFlow - Team Task Manager",\n  "short_name": "TaskFlow",\n  "description": "Assign, track and approve team tasks. Works offline.",\n  "start_url": "./",\n  "scope": "./",\n  "display": "standalone",\n  "orientation": "portrait-primary",\n  "background_color": "#7F77DD",\n  "theme_color": "#7F77DD",\n  "lang": "en",\n  "categories": ["productivity", "business"],\n  "icons": [\n    { "src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxOTIiIGhlaWdodD0iMTkyIiB2aWV3Qm94PSIwIDAgMTkyIDE5MiI+CiAgPHJlY3Qgd2lkdGg9IjE5MiIgaGVpZ2h0PSIxOTIiIHJ4PSI0MiIgZmlsbD0iIzdGNzdERCIvPgogIDxwb2x5bGluZSBwb2ludHM9IjUzLDk5IDg0LDEyOCAxMzgsNjciIGZpbGw9Im5vbmUiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iMTEiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIvPgo8L3N2Zz4=", "sizes": "192x192", "type": "image/svg+xml", "purpose": "any" },\n    { "src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI1MTIiIGhlaWdodD0iNTEyIiB2aWV3Qm94PSIwIDAgNTEyIDUxMiI+CiAgPHJlY3Qgd2lkdGg9IjUxMiIgaGVpZ2h0PSI1MTIiIHJ4PSIxMTIiIGZpbGw9IiM3Rjc3REQiLz4KICA8cG9seWxpbmUgcG9pbnRzPSIxNDMsMjY2IDIyNSwzNDMgMzY4LDE3OSIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSIzMCIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+Cjwvc3ZnPg==", "sizes": "512x512", "type": "image/svg+xml", "purpose": "any" },\n    { "src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI1MTIiIGhlaWdodD0iNTEyIiB2aWV3Qm94PSIwIDAgNTEyIDUxMiI+CiAgPHJlY3Qgd2lkdGg9IjUxMiIgaGVpZ2h0PSI1MTIiIGZpbGw9IiM3Rjc3REQiLz4KICA8cG9seWxpbmUgcG9pbnRzPSIxNTMsMjc2IDIzNSwzNTMgMzU4LDE4OSIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSIzNSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+Cjwvc3ZnPg==", "sizes": "512x512", "type": "image/svg+xml", "purpose": "maskable" }\n  ],\n  "screenshots": [\n    { "src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI1MTIiIGhlaWdodD0iNTEyIiB2aWV3Qm94PSIwIDAgNTEyIDUxMiI+CiAgPHJlY3Qgd2lkdGg9IjUxMiIgaGVpZ2h0PSI1MTIiIHJ4PSIxMTIiIGZpbGw9IiM3Rjc3REQiLz4KICA8cG9seWxpbmUgcG9pbnRzPSIxNDMsMjY2IDIyNSwzNDMgMzY4LDE3OSIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSIzMCIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+Cjwvc3ZnPg==", "sizes": "512x512", "type": "image/svg+xml", "form_factor": "narrow" }\n  ]\n}';
+  const blob = new Blob([manifest], {type: 'application/manifest+json'});
+  const url  = URL.createObjectURL(blob);
+  const link = document.createElement('link');
+  link.rel   = 'manifest';
+  link.href  = url;
+  document.head.appendChild(link);
+})();
+
+// ── 2. Service Worker — full offline cache ─────────────────────────────────────
+if ('serviceWorker' in navigator) {
+  const SW = `
+const CACHE = 'taskflow-v3';
+const ASSETS = [self.location.href];
+
+self.addEventListener('install', e => {
+  e.waitUntil(
+    caches.open(CACHE).then(c => c.addAll(ASSETS)).then(() => self.skipWaiting())
+  );
+});
+
+self.addEventListener('activate', e => {
+  e.waitUntil(
+    caches.keys()
+      .then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k))))
+      .then(() => self.clients.claim())
+  );
+});
+
+self.addEventListener('fetch', e => {
+  e.respondWith(
+    caches.match(e.request).then(cached => {
+      if (cached) return cached;
+      return fetch(e.request).then(resp => {
+        if (resp && resp.status === 200 && resp.type === 'basic') {
+          const clone = resp.clone();
+          caches.open(CACHE).then(c => c.put(e.request, clone));
+        }
+        return resp;
+      }).catch(() => cached);
+    })
+  );
+});
+  `;
+  const blob = new Blob([SW], {type:'application/javascript'});
+  navigator.serviceWorker.register(URL.createObjectURL(blob))
+    .catch(e => console.warn('SW:', e));
+}
+
+// ── 3. Install prompt — show "Add to Home Screen" banner ──────────────────────
+let deferredPrompt;
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  deferredPrompt = e;
+  // Show install banner after 3 seconds if not already installed
+  setTimeout(() => {
+    if (deferredPrompt && document.getElementById('install-banner')) {
+      document.getElementById('install-banner').style.display = 'flex';
+    }
+  }, 3000);
+});
+window.addEventListener('appinstalled', () => {
+  deferredPrompt = null;
+  const b = document.getElementById('install-banner');
+  if (b) b.style.display = 'none';
+});
+function installApp() {
+  if (deferredPrompt) {
+    deferredPrompt.prompt();
+    deferredPrompt.userChoice.then(() => {
+      deferredPrompt = null;
+      document.getElementById('install-banner').style.display = 'none';
+    });
+  }
+}
+</script>
+
+<!-- Install banner (shows automatically on Android Chrome) -->
+<div id="install-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;
+  background:#7F77DD;color:#fff;padding:14px 16px;z-index:9999;
+  align-items:center;justify-content:space-between;gap:12px;
+  box-shadow:0 -2px 12px rgba(0,0,0,0.15);">
+  <div style="display:flex;align-items:center;gap:10px;">
+    <span style="font-size:24px;">✓</span>
+    <div>
+      <p style="margin:0;font-weight:700;font-size:14px;">Install TaskFlow</p>
+      <p style="margin:0;font-size:12px;opacity:.85;">Add to home screen for quick access</p>
+    </div>
+  </div>
+  <div style="display:flex;gap:8px;">
+    <button onclick="installApp()" style="background:#fff;color:#7F77DD;border:none;
+      padding:8px 16px;border-radius:8px;font-weight:700;font-size:13px;cursor:pointer;">
+      Install
+    </button>
+    <button onclick="document.getElementById('install-banner').style.display='none'"
+      style="background:rgba(255,255,255,0.2);color:#fff;border:none;
+      padding:8px 12px;border-radius:8px;font-size:13px;cursor:pointer;">
+      ✕
+    </button>
+  </div>
+</div>
+
+<!-- React + Babel for standalone operation (no build step needed) -->
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+<script type="text/babel">
+const { useState, useEffect, useCallback, useRef } = React;
+
+// ── Utilities ──────────────────────────────────────────────────────────────
+
+function todayStr() { return new Date().toISOString().split("T")[0]; }
+
+function daysUntil(dateStr) {
+  const now = new Date(); now.setHours(0,0,0,0);
+  const due = new Date(dateStr); due.setHours(0,0,0,0);
+  return Math.ceil((due - now) / 86400000);
+}
+
+function addDays(n) {
+  const d = new Date(); d.setDate(d.getDate() + n);
+  return d.toISOString().split("T")[0];
+}
+
+function genId() {
+  try { return crypto.randomUUID(); } catch { return Math.random().toString(36).slice(2)+Date.now().toString(36); }
+}
+
+function hashPw(pw) {
+  let h = 5381;
+  for (let i = 0; i < pw.length; i++) h = ((h << 5) + h) ^ pw.charCodeAt(i);
+  return "h_" + (h >>> 0).toString(16);
+}
+
+function getReminderLabel(dueDate, isDaily) {
+  if (isDaily) return { label:"Daily", color:"#534AB7", bg:"#EEEDFE" };
+  const d = daysUntil(dueDate);
+  if (d < 0)   return { label:"Overdue",    color:"#A32D2D", bg:"#FCEBEB" };
+  if (d === 0) return { label:"Due today",  color:"#854F0B", bg:"#FAEEDA" };
+  if (d <= 3)  return { label:`${d}d left`, color:"#A32D2D", bg:"#FCEBEB" };
+  if (d <= 7)  return { label:`${d}d left`, color:"#854F0B", bg:"#FAEEDA" };
+  if (d <= 15) return { label:`${d}d left`, color:"#3B6D11", bg:"#EAF3DE" };
+  return { label:`${d}d left`, color:"#185FA5", bg:"#E6F1FB" };
+}
+
+function shouldShowToday(t) { return t.isDaily || daysUntil(t.dueDate) <= 1; }
+function shouldRemind(t)    { const d=daysUntil(t.dueDate); return t.isDaily || [0,1,3,7,15,30].includes(d) || d<0; }
+
+// ── Storage ────────────────────────────────────────────────────────────────
+
+const KEY = "tf_v3";
+function load() { try { const r=localStorage.getItem(KEY); return r?JSON.parse(r):null; } catch{ return null; } }
+function save(s) { try { localStorage.setItem(KEY, JSON.stringify(s)); } catch{} }
+
+// ── Initial seed data ──────────────────────────────────────────────────────
+
+function seedState() {
+  const empIds = [genId(), genId(), genId()];
+  const users = [
+    { id:"admin", username:"admin", passwordHash:hashPw("admin123"), name:"Manager", role:"master", active:true },
+    { id:empIds[0], username:"emp1", passwordHash:hashPw("pass1"), name:"Rahul Sharma", role:"employee", active:true },
+    { id:empIds[1], username:"emp2", passwordHash:hashPw("pass2"), name:"Priya Das",    role:"employee", active:true },
+    { id:empIds[2], username:"emp3", passwordHash:hashPw("pass3"), name:"Amit Roy",     role:"employee", active:true },
+  ];
+  const tasks = [
+    { id:genId(), title:"Submit daily sales report",    desc:"Fill in the sales tracker sheet by end of day.", assignedTo:[empIds[0],empIds[1]], dueDate:todayStr(), isDaily:true,  statuses:{}, createdAt:new Date().toISOString(), createdBy:"admin" },
+    { id:genId(), title:"Complete compliance training", desc:"Finish the online compliance module on the HR portal.", assignedTo:empIds, dueDate:addDays(28), isDaily:false, statuses:{}, createdAt:new Date().toISOString(), createdBy:"admin" },
+    { id:genId(), title:"Prepare Q2 review document",   desc:"Summarise Q2 performance across all product lines.", assignedTo:[empIds[2]], dueDate:addDays(7), isDaily:false, statuses:{}, createdAt:new Date().toISOString(), createdBy:"admin" },
+  ];
+  return { users, tasks, notifications:[] };
+}
+
+// ── Helpers ────────────────────────────────────────────────────────────────
+
+const AVATAR_BG = ["#EEEDFE","#E1F5EE","#FAEEDA","#FCEBEB","#E6F1FB","#EAF3DE","#FBEAF0"];
+const AVATAR_FG = ["#534AB7","#0F6E56","#854F0B","#A32D2D","#185FA5","#3B6D11","#993556"];
+function avatarIdx(s){ let h=0; for(let c of s) h=(h<<5)-h+c.charCodeAt(0); return Math.abs(h)%AVATAR_BG.length; }
+function initials(n){ return n.split(" ").map(x=>x[0]).join("").slice(0,2).toUpperCase(); }
+
+function getStatus(task, empId) {
+  const s = task.statuses[empId];
+  if (!s) return null;
+  if (task.isDaily && s.dailyDate !== todayStr()) return null;
+  return s;
+}
+
+// ── Design tokens ──────────────────────────────────────────────────────────
+
+const C = {
+  purple:"#7F77DD", purpleLight:"#EEEDFE", purpleDark:"#534AB7",
+  green:"#639922",  greenLight:"#EAF3DE",  greenDark:"#3B6D11",
+  amber:"#EF9F27",  amberLight:"#FAEEDA",  amberDark:"#854F0B",
+  red:"#E24B4A",    redLight:"#FCEBEB",    redDark:"#A32D2D",
+  blue:"#378ADD",   blueLight:"#E6F1FB",   blueDark:"#185FA5",
+  text:"#1a1a1a",   muted:"#666",          faint:"#aaa",
+  border:"#e0e0e0", surface:"#fff",        bg:"#F7F7F8",
+};
+
+const S = {
+  card:   { background:C.surface, border:`0.5px solid ${C.border}`, borderRadius:12, padding:"14px 16px", marginBottom:10 },
+  input:  { width:"100%", padding:"10px 12px", border:`0.5px solid ${C.border}`, borderRadius:8, fontSize:15, boxSizing:"border-box", marginBottom:10, outline:"none", background:C.surface },
+  textarea:{ width:"100%", padding:"10px 12px", border:`0.5px solid ${C.border}`, borderRadius:8, fontSize:14, boxSizing:"border-box", marginBottom:10, minHeight:80, resize:"vertical", outline:"none" },
+  label:  { fontSize:12, color:C.muted, display:"block", marginBottom:5, fontWeight:600 },
+  btn:    { padding:"9px 16px", borderRadius:8, border:`0.5px solid ${C.border}`, background:"transparent", cursor:"pointer", fontSize:13, fontWeight:500, touchAction:"manipulation" },
+  btnPrimary:{ background:C.purple, color:"#fff", border:"none", padding:"10px 18px", borderRadius:8, cursor:"pointer", fontSize:13, fontWeight:600, touchAction:"manipulation" },
+  btnDanger: { background:C.red,    color:"#fff", border:"none", padding:"8px 14px",  borderRadius:8, cursor:"pointer", fontSize:12, fontWeight:500, touchAction:"manipulation" },
+  btnSuccess:{ background:C.green,  color:"#fff", border:"none", padding:"8px 14px",  borderRadius:8, cursor:"pointer", fontSize:12, fontWeight:500, touchAction:"manipulation" },
+  btnAmber:  { background:C.amber,  color:"#fff", border:"none", padding:"8px 14px",  borderRadius:8, cursor:"pointer", fontSize:12, fontWeight:500, touchAction:"manipulation" },
+  error: { color:C.redDark, fontSize:13, marginBottom:8, padding:"8px 10px", background:C.redLight, borderRadius:6 },
+  badge: (color,bg)=>({ display:"inline-block", padding:"2px 9px", borderRadius:20, fontSize:11, fontWeight:600, color, background:bg, marginLeft:6, whiteSpace:"nowrap" }),
+  summCard:(color,bg)=>({ background:bg, borderRadius:10, padding:"12px 10px", textAlign:"center", flex:1, minWidth:72 }),
+  row:{ display:"flex", gap:10, marginBottom:16, flexWrap:"wrap" },
+};
+
+// ── Small components ───────────────────────────────────────────────────────
+
+function Avatar({ name, size=36 }) {
+  const i = avatarIdx(name);
+  return (
+    <div style={{ width:size, height:size, borderRadius:"50%", background:AVATAR_BG[i],
+      display:"flex", alignItems:"center", justifyContent:"center",
+      fontWeight:700, fontSize:size*.36, color:AVATAR_FG[i], flexShrink:0 }}>
+      {initials(name)}
+    </div>
+  );
+}
+
+function Badge({ label, color, bg }) {
+  return <span style={S.badge(color,bg)}>{label}</span>;
+}
+
+function Modal({ title, onClose, children }) {
+  return (
+    <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.45)", display:"flex",
+      alignItems:"flex-end", justifyContent:"center", zIndex:200, padding:"0 0 0 0" }}
+      onClick={e=>{ if(e.target===e.currentTarget) onClose(); }}>
+      <div style={{ background:C.surface, borderRadius:"20px 20px 0 0", padding:"20px 20px 40px",
+        width:"100%", maxWidth:540, maxHeight:"90vh", overflowY:"auto" }}>
+        <div style={{ width:40, height:4, background:C.border, borderRadius:2, margin:"0 auto 16px" }}/>
+        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16 }}>
+          <h3 style={{ margin:0, fontSize:17, fontWeight:700 }}>{title}</h3>
+          <button style={{ background:"none", border:"none", cursor:"pointer", fontSize:22, color:C.muted, padding:"0 4px" }} onClick={onClose}>×</button>
+        </div>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function NotifBell({ notifs, onClear, onOpen }) {
+  const unread = notifs.filter(n=>!n.read).length;
+  return (
+    <button style={{ ...S.btn, position:"relative", padding:"8px 11px", fontSize:18 }} onClick={onOpen}>
+      🔔
+      {unread > 0 && (
+        <span style={{ position:"absolute", top:2, right:2, background:C.red, color:"#fff",
+          borderRadius:10, padding:"0 5px", fontSize:10, fontWeight:700, minWidth:15, textAlign:"center" }}>
+          {unread>9?"9+":unread}
+        </span>
+      )}
+    </button>
+  );
+}
+
+// ── Bottom nav bar ─────────────────────────────────────────────────────────
+
+const NAV_TABS = {
+  master:   [{ key:"today",label:"Today",icon:"📋" },{ key:"all",label:"All tasks",icon:"📁" },{ key:"approvals",label:"Approvals",icon:"✅" },{ key:"employees",label:"Team",icon:"👥" }],
+  employee: [{ key:"today",label:"Today",icon:"📋" },{ key:"upcoming",label:"Upcoming",icon:"📅" }],
+};
+
+function BottomNav({ role, tab, setTab, badge }) {
+  const tabs = NAV_TABS[role] || NAV_TABS.employee;
+  return (
+    <div style={{ position:"fixed", bottom:0, left:0, right:0, background:C.surface,
+      borderTop:`0.5px solid ${C.border}`, display:"flex", zIndex:100,
+      paddingBottom:"env(safe-area-inset-bottom, 8px)" }}>
+      {tabs.map(t => (
+        <button key={t.key} onClick={()=>setTab(t.key)}
+          style={{ flex:1, background:"none", border:"none", cursor:"pointer",
+            padding:"10px 0 6px", display:"flex", flexDirection:"column",
+            alignItems:"center", gap:3, touchAction:"manipulation", position:"relative" }}>
+          <span style={{ fontSize:20 }}>{t.icon}</span>
+          <span style={{ fontSize:10, fontWeight:tab===t.key?700:400,
+            color:tab===t.key?C.purple:C.muted }}>{t.label}</span>
+          {t.key==="approvals" && badge > 0 && (
+            <span style={{ position:"absolute", top:6, right:"25%", background:C.red, color:"#fff",
+              borderRadius:10, padding:"0 5px", fontSize:9, fontWeight:700 }}>{badge}</span>
+          )}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+// ── Notif drawer ───────────────────────────────────────────────────────────
+
+function NotifDrawer({ notifs, onClear, onClose }) {
+  return (
+    <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.45)", zIndex:300 }}
+      onClick={e=>{ if(e.target===e.currentTarget) onClose(); }}>
+      <div style={{ position:"absolute", top:0, right:0, width:Math.min(320, window.innerWidth),
+        height:"100%", background:C.surface, overflowY:"auto", boxShadow:"-4px 0 20px rgba(0,0,0,0.1)" }}>
+        <div style={{ padding:"16px 16px 10px", borderBottom:`0.5px solid ${C.border}`,
+          display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+          <h3 style={{ margin:0, fontSize:16, fontWeight:700 }}>Notifications</h3>
+          <div style={{ display:"flex", gap:8 }}>
+            {notifs.length > 0 && <button style={{ ...S.btn, fontSize:12, padding:"5px 10px" }} onClick={onClear}>Clear</button>}
+            <button style={{ background:"none", border:"none", fontSize:22, cursor:"pointer", color:C.muted }} onClick={onClose}>×</button>
+          </div>
+        </div>
+        {notifs.length === 0 && (
+          <div style={{ textAlign:"center", padding:"50px 20px", color:C.faint }}>
+            <div style={{ fontSize:36 }}>🔔</div>
+            <p style={{ marginTop:12 }}>No notifications</p>
+          </div>
+        )}
+        {[...notifs].reverse().map(n => (
+          <div key={n.id} style={{ padding:"12px 16px", borderBottom:`0.5px solid #f5f5f5`,
+            background:n.read?"transparent":"#FAFAFE" }}>
+            <p style={{ margin:0, fontSize:13, color:C.text, lineHeight:1.5 }}>{n.message}</p>
+            <p style={{ margin:"4px 0 0", fontSize:11, color:C.faint }}>
+              {new Date(n.createdAt).toLocaleString()}
+            </p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── Task card (reusable) ───────────────────────────────────────────────────
+
+function TaskCard({ task, empId, onMarkDone, onDelete, isManager }) {
+  const rl = getReminderLabel(task.dueDate, task.isDaily);
+  const st = getStatus(task, empId);
+  return (
+    <div style={{ ...S.card, borderLeft: !isManager ? `3px solid ${rl.color}` : undefined,
+      borderRadius: !isManager ? "0 12px 12px 0" : 12 }}>
+      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:10 }}>
+        <div style={{ flex:1, minWidth:0 }}>
+          <div style={{ display:"flex", alignItems:"center", flexWrap:"wrap", gap:4, marginBottom:4 }}>
+            <span style={{ fontWeight:600, fontSize:14, color:C.text }}>{task.title}</span>
+            <Badge label={rl.label} color={rl.color} bg={rl.bg} />
+            {task.isDaily && <Badge label="Daily" color={C.blueDark} bg={C.blueLight} />}
+          </div>
+          {task.desc && <p style={{ fontSize:13, color:C.muted, margin:"0 0 4px", lineHeight:1.4 }}>{task.desc}</p>}
+          {!task.isDaily && <p style={{ fontSize:12, color:C.faint, margin:0 }}>Due: {task.dueDate}</p>}
+          {st?.state==="rejected" && st.comment && (
+            <div style={{ marginTop:8, padding:"8px 10px", background:C.redLight, borderRadius:8 }}>
+              <p style={{ margin:0, fontSize:12, color:C.redDark, fontWeight:600 }}>Rejected</p>
+              <p style={{ margin:"2px 0 0", fontSize:12, color:C.redDark }}>{st.comment}</p>
+            </div>
+          )}
+        </div>
+        <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-end", gap:6, flexShrink:0 }}>
+          {isManager ? (
+            <button style={S.btnDanger} onClick={onDelete}>Delete</button>
+          ) : (
+            <>
+              {!st && <button style={S.btnSuccess} onClick={onMarkDone}>Mark done</button>}
+              {st?.state==="pending"  && <Badge label="Awaiting approval" color={C.amberDark} bg={C.amberLight}/>}
+              {st?.state==="done"     && <Badge label="✓ Approved"        color={C.greenDark} bg={C.greenLight}/>}
+              {st?.state==="rejected" && <button style={S.btnAmber} onClick={onMarkDone}>Resubmit</button>}
+            </>
+          )}
+          {isManager && (
+            <span style={{ fontSize:12, color:
+              !st?"#aaa": st.state==="done"?C.greenDark: st.state==="pending"?C.amberDark: C.redDark }}>
+              {!st?"Not started": st.state==="done"?"Approved": st.state==="pending"?"Awaiting": "Rejected"}
+            </span>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Main app ───────────────────────────────────────────────────────────────
+
+function App() {
+  const [state, setState] = useState(()=>load()||seedState());
+  const [user,  setUser]  = useState(null);
+  const [loginForm, setLoginForm] = useState({ username:"", password:"" });
+  const [loginErr,  setLoginErr]  = useState("");
+  const [tab, setTab] = useState("today");
+  const [filterEmp, setFilterEmp] = useState("all");
+  const [notifOpen, setNotifOpen] = useState(false);
+
+  // modals
+  const [addTaskOpen, setAddTaskOpen] = useState(false);
+  const [addEmpOpen,  setAddEmpOpen]  = useState(false);
+  const [rejectModal, setRejectModal] = useState(null);
+  const [deleteConfirm, setDeleteConfirm] = useState(null);
+  const [deactivateConfirm, setDeactivateConfirm] = useState(null);
+
+  // forms
+  const [newTask, setNewTask] = useState({ title:"", desc:"", assignedTo:[], dueDate:addDays(1), isDaily:false });
+  const [newEmp,  setNewEmp]  = useState({ name:"", username:"", password:"" });
+  const [rejectComment, setRejectComment] = useState("");
+  const [showPw, setShowPw] = useState(false);
+  const [formErr, setFormErr] = useState("");
+
+  const persist = useCallback((updater)=>{
+    setState(prev=>{ const next=typeof updater==="function"?updater(prev):updater; save(next); return next; });
+  },[]);
+
+  function notify(userId, message) {
+    persist(s=>({ ...s, notifications:[...s.notifications,
+      { id:genId(), userId, message, read:false, createdAt:new Date().toISOString() }] }));
+  }
+
+  function login() {
+    const u = state.users.find(u=>u.username===loginForm.username && u.passwordHash===hashPw(loginForm.password));
+    if (!u) { setLoginErr("Invalid username or password."); return; }
+    if (!u.active) { setLoginErr("Your account is deactivated. Contact your manager."); return; }
+    setUser(u); setLoginErr("");
+    persist(s=>({ ...s, notifications:s.notifications.map(n=>n.userId===u.id?{...n,read:true}:n) }));
+  }
+
+  function logout() { setUser(null); setLoginForm({username:"",password:""}); setTab("today"); }
+
+  function markDone(taskId, empId) {
+    persist(s=>({ ...s, tasks:s.tasks.map(t=>t.id===taskId
+      ? {...t, statuses:{...t.statuses,[empId]:{state:"pending",comment:"",dailyDate:todayStr()}}}
+      : t) }));
+    const task=state.tasks.find(t=>t.id===taskId), emp=state.users.find(u=>u.id===empId);
+    if(task&&emp) notify("admin", `${emp.name} submitted "${task.title}" for approval.`);
+  }
+
+  function approveTask(taskId, empId) {
+    persist(s=>({ ...s, tasks:s.tasks.map(t=>t.id===taskId
+      ? {...t, statuses:{...t.statuses,[empId]:{state:"done",comment:"",dailyDate:todayStr()}}}
+      : t) }));
+    const task=state.tasks.find(t=>t.id===taskId);
+    if(task) notify(empId, `✓ Your task "${task.title}" was approved.`);
+  }
+
+  function rejectTask() {
+    if (!rejectComment.trim()) return;
+    const {taskId, empId} = rejectModal;
+    persist(s=>({ ...s, tasks:s.tasks.map(t=>t.id===taskId
+      ? {...t, statuses:{...t.statuses,[empId]:{state:"rejected",comment:rejectComment,dailyDate:todayStr()}}}
+      : t) }));
+    const task=state.tasks.find(t=>t.id===taskId);
+    if(task) notify(empId, `✗ "${task.title}" was rejected: "${rejectComment}"`);
+    setRejectModal(null); setRejectComment("");
+  }
+
+  function deleteTask(id) { persist(s=>({...s, tasks:s.tasks.filter(t=>t.id!==id)})); setDeleteConfirm(null); }
+
+  function addTask() {
+    if (!newTask.title.trim()) { setFormErr("Task title is required."); return; }
+    if (!newTask.assignedTo.length) { setFormErr("Assign to at least one employee."); return; }
+    const t = {...newTask, id:genId(), statuses:{}, createdAt:new Date().toISOString(), createdBy:user.id};
+    persist(s=>({...s, tasks:[...s.tasks, t]}));
+    newTask.assignedTo.forEach(eid=>notify(eid, `New task assigned: "${newTask.title}"`));
+    setNewTask({title:"",desc:"",assignedTo:[],dueDate:addDays(1),isDaily:false});
+    setAddTaskOpen(false); setFormErr("");
+  }
+
+  function addEmployee() {
+    if (!newEmp.name.trim()||!newEmp.username.trim()||!newEmp.password.trim()) { setFormErr("All fields required."); return; }
+    if (state.users.find(u=>u.username===newEmp.username)) { setFormErr("Username already taken."); return; }
+    if (newEmp.password.length < 4) { setFormErr("Password must be at least 4 characters."); return; }
+    const emp={id:genId(),username:newEmp.username,passwordHash:hashPw(newEmp.password),name:newEmp.name,role:"employee",active:true,createdAt:new Date().toISOString()};
+    persist(s=>({...s, users:[...s.users, emp]}));
+    setNewEmp({name:"",username:"",password:""}); setAddEmpOpen(false); setFormErr("");
+  }
+
+  function toggleDeactivate(empId) {
+    persist(s=>({...s, users:s.users.map(u=>u.id===empId?{...u,active:!u.active}:u)}));
+    setDeactivateConfirm(null);
+  }
+
+  function clearNotifs() { persist(s=>({...s, notifications:s.notifications.filter(n=>n.userId!==user.id)})); }
+
+  const employees    = state.users.filter(u=>u.role==="employee");
+  const activeEmps   = employees.filter(e=>e.active);
+  const myNotifs     = user ? state.notifications.filter(n=>n.userId===user.id) : [];
+  const unreadCount  = myNotifs.filter(n=>!n.read).length;
+  const empName = id => state.users.find(u=>u.id===id)?.name||"Unknown";
+
+  const pendingApprovals = state.tasks.flatMap(t=>
+    Object.entries(t.statuses)
+      .filter(([eid,s])=> (t.isDaily&&s.dailyDate!==todayStr())?false: s.state==="pending")
+      .map(([eid,s])=>({task:t,empId:eid}))
+  );
+
+  const getEmpTasks    = id => state.tasks.filter(t=>t.assignedTo.includes(id));
+  const getTodayTasks  = id => getEmpTasks(id).filter(t=>shouldShowToday(t));
+  const filteredEmps   = filterEmp==="all" ? activeEmps : activeEmps.filter(e=>e.id===filterEmp);
+  const overdueCount   = state.tasks.filter(t=>!t.isDaily&&daysUntil(t.dueDate)<0).length;
+
+  // ── Login ────────────────────────────────────────────────────────────────
+
+  if (!user) return (
+    <div style={{ minHeight:"100vh", background:C.bg, display:"flex", alignItems:"center",
+      justifyContent:"center", padding:"20px 16px" }}>
+      <div style={{ width:"100%", maxWidth:380 }}>
+        <div style={{ textAlign:"center", marginBottom:28 }}>
+          <div style={{ width:60, height:60, borderRadius:16, background:C.purple,
+            display:"flex", alignItems:"center", justifyContent:"center",
+            margin:"0 auto 14px", fontSize:28, color:"#fff", fontWeight:700 }}>✓</div>
+          <h1 style={{ fontSize:24, fontWeight:800, margin:0, color:C.text }}>TaskFlow</h1>
+          <p style={{ fontSize:14, color:C.muted, marginTop:6 }}>Team task manager</p>
+        </div>
+        <div style={{ ...S.card, padding:24 }}>
+          <label style={S.label}>Username</label>
+          <input style={S.input} value={loginForm.username}
+            onChange={e=>setLoginForm(f=>({...f,username:e.target.value}))}
+            placeholder="Enter username" autoFocus
+            onKeyDown={e=>e.key==="Enter"&&login()} />
+          <label style={S.label}>Password</label>
+          <div style={{ position:"relative", marginBottom:10 }}>
+            <input style={{...S.input, marginBottom:0, paddingRight:44}}
+              type={showPw?"text":"password"} value={loginForm.password}
+              onChange={e=>setLoginForm(f=>({...f,password:e.target.value}))}
+              placeholder="Enter password"
+              onKeyDown={e=>e.key==="Enter"&&login()} />
+            <button onClick={()=>setShowPw(p=>!p)}
+              style={{ position:"absolute", right:10, top:"50%", transform:"translateY(-50%)",
+                background:"none", border:"none", cursor:"pointer", fontSize:16, color:C.muted }}>
+              {showPw?"🙈":"👁"}
+            </button>
+          </div>
+          {loginErr && <p style={S.error}>{loginErr}</p>}
+          <button style={{...S.btnPrimary, width:"100%", padding:12, fontSize:15}} onClick={login}>Sign in</button>
+          <div style={{ marginTop:16, padding:"12px 14px", background:C.bg, borderRadius:8,
+            fontSize:12, color:C.muted, lineHeight:1.8 }}>
+            <strong>Manager:</strong> admin / admin123<br/>
+            <strong>Employees:</strong> emp1/pass1 · emp2/pass2 · emp3/pass3
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  // ── Employee view ────────────────────────────────────────────────────────
+
+  if (user.role === "employee") {
+    const myTasks       = state.tasks.filter(t=>t.assignedTo.includes(user.id));
+    const todayTasks    = myTasks.filter(t=>shouldShowToday(t));
+    const upcomingTasks = myTasks.filter(t=>!t.isDaily&&daysUntil(t.dueDate)>1&&shouldRemind(t));
+    const doneCount     = myTasks.filter(t=>getStatus(t,user.id)?.state==="done").length;
+
+    return (
+      <div style={{ background:C.bg, minHeight:"100vh", paddingBottom:80 }}>
+        {/* Header */}
+        <div style={{ background:C.surface, borderBottom:`0.5px solid ${C.border}`,
+          padding:"14px 16px", display:"flex", justifyContent:"space-between", alignItems:"center",
+          position:"sticky", top:0, zIndex:50 }}>
+          <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+            <Avatar name={user.name} />
+            <div>
+              <p style={{ margin:0, fontSize:11, color:C.faint }}>Employee</p>
+              <h2 style={{ margin:0, fontSize:16, fontWeight:700, color:C.text }}>{user.name}</h2>
+            </div>
+          </div>
+          <div style={{ display:"flex", gap:8 }}>
+            <NotifBell notifs={myNotifs} onOpen={()=>setNotifOpen(true)} />
+            <button style={S.btn} onClick={logout}>Sign out</button>
+          </div>
+        </div>
+
+        <div style={{ padding:"16px 16px 0" }}>
+          <div style={S.row}>
+            {[
+              {label:"Total",    val:myTasks.length,     color:C.purpleDark, bg:C.purpleLight},
+              {label:"Today",    val:todayTasks.length,  color:C.amberDark,  bg:C.amberLight},
+              {label:"Done",     val:doneCount,          color:C.greenDark,  bg:C.greenLight},
+              {label:"Upcoming", val:upcomingTasks.length,color:C.blueDark,  bg:C.blueLight},
+            ].map(c=>(
+              <div key={c.label} style={S.summCard(c.color,c.bg)}>
+                <div style={{fontSize:22,fontWeight:800,color:c.color}}>{c.val}</div>
+                <div style={{fontSize:11,color:c.color,opacity:.85}}>{c.label}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div style={{ padding:"0 16px" }}>
+          {tab==="today" && <>
+            {todayTasks.length===0 ? (
+              <div style={{textAlign:"center",padding:"50px 0",color:C.faint}}>
+                <div style={{fontSize:40}}>🎉</div>
+                <p style={{marginTop:10,fontSize:15}}>All caught up for today!</p>
+              </div>
+            ) : todayTasks.map(t=>(
+              <TaskCard key={t.id} task={t} empId={user.id}
+                onMarkDone={()=>markDone(t.id,user.id)} isManager={false}/>
+            ))}
+          </>}
+
+          {tab==="upcoming" && <>
+            {upcomingTasks.length===0 ? (
+              <div style={{textAlign:"center",padding:"50px 0",color:C.faint}}>
+                <div style={{fontSize:40}}>📅</div>
+                <p style={{marginTop:10,fontSize:15}}>No upcoming reminders.</p>
+              </div>
+            ) : upcomingTasks.map(t=>(
+              <TaskCard key={t.id} task={t} empId={user.id}
+                onMarkDone={()=>markDone(t.id,user.id)} isManager={false}/>
+            ))}
+          </>}
+        </div>
+
+        <BottomNav role="employee" tab={tab} setTab={setTab} />
+        {notifOpen && <NotifDrawer notifs={myNotifs} onClear={clearNotifs} onClose={()=>setNotifOpen(false)}/>}
+      </div>
+    );
+  }
+
+  // ── Manager view ─────────────────────────────────────────────────────────
+
+  return (
+    <div style={{ background:C.bg, minHeight:"100vh", paddingBottom:80 }}>
+      {/* Header */}
+      <div style={{ background:C.surface, borderBottom:`0.5px solid ${C.border}`,
+        padding:"14px 16px", display:"flex", justifyContent:"space-between", alignItems:"center",
+        position:"sticky", top:0, zIndex:50 }}>
+        <div>
+          <p style={{margin:0,fontSize:11,color:C.faint}}>Manager</p>
+          <h2 style={{margin:0,fontSize:17,fontWeight:800,color:C.text}}>TaskFlow</h2>
+        </div>
+        <div style={{display:"flex",gap:8}}>
+          <NotifBell notifs={myNotifs} onOpen={()=>setNotifOpen(true)}/>
+          <button style={S.btn} onClick={logout}>Sign out</button>
+        </div>
+      </div>
+
+      <div style={{padding:"16px 16px 0"}}>
+        <div style={S.row}>
+          {[
+            {label:"Tasks",    val:state.tasks.length,       color:C.purpleDark, bg:C.purpleLight},
+            {label:"Pending",  val:pendingApprovals.length,  color:C.amberDark,  bg:C.amberLight},
+            {label:"Overdue",  val:overdueCount,             color:C.redDark,    bg:C.redLight},
+            {label:"Team",     val:activeEmps.length,        color:C.blueDark,   bg:C.blueLight},
+          ].map(c=>(
+            <div key={c.label} style={S.summCard(c.color,c.bg)}>
+              <div style={{fontSize:22,fontWeight:800,color:c.color}}>{c.val}</div>
+              <div style={{fontSize:11,color:c.color,opacity:.85}}>{c.label}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div style={{padding:"0 16px"}}>
+
+        {/* ─ Today / All Tasks ─ */}
+        {(tab==="today"||tab==="all") && <>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14,flexWrap:"wrap",gap:8}}>
+            <select style={{padding:"8px 10px",borderRadius:8,border:`0.5px solid ${C.border}`,fontSize:13,background:C.surface}}
+              value={filterEmp} onChange={e=>setFilterEmp(e.target.value)}>
+              <option value="all">All employees</option>
+              {activeEmps.map(e=><option key={e.id} value={e.id}>{e.name}</option>)}
+            </select>
+            <button style={S.btnPrimary} onClick={()=>{setFormErr("");setAddTaskOpen(true);}}>+ Add task</button>
+          </div>
+
+          {filteredEmps.map(emp=>{
+            const empTasks = tab==="today" ? getTodayTasks(emp.id) : getEmpTasks(emp.id);
+            return (
+              <div key={emp.id} style={{marginBottom:20}}>
+                <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
+                  <Avatar name={emp.name} size={28}/>
+                  <span style={{fontSize:14,fontWeight:700,color:"#444"}}>{emp.name}</span>
+                  <span style={{fontSize:12,color:C.faint}}>@{emp.username}</span>
+                </div>
+                {empTasks.length===0
+                  ? <p style={{fontSize:13,color:C.faint,marginLeft:36}}>No tasks.</p>
+                  : empTasks.map(t=>(
+                      <div key={t.id} style={{marginLeft:36}}>
+                        <TaskCard task={t} empId={emp.id}
+                          onDelete={()=>setDeleteConfirm(t.id)} isManager={true}/>
+                      </div>
+                  ))
+                }
+              </div>
+            );
+          })}
+        </>}
+
+        {/* ─ Approvals ─ */}
+        {tab==="approvals" && <>
+          <h3 style={{fontSize:15,fontWeight:700,marginBottom:14}}>Pending approvals</h3>
+          {pendingApprovals.length===0
+            ? <div style={{textAlign:"center",padding:"40px 0",color:C.faint}}>
+                <div style={{fontSize:36}}>✅</div>
+                <p style={{marginTop:10}}>No pending approvals.</p>
+              </div>
+            : pendingApprovals.map(({task,empId})=>(
+              <div key={`${task.id}-${empId}`} style={S.card}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:10,flexWrap:"wrap"}}>
+                  <div style={{display:"flex",alignItems:"center",gap:10}}>
+                    <Avatar name={empName(empId)} size={34}/>
+                    <div>
+                      <p style={{margin:0,fontWeight:700,fontSize:14}}>{task.title}</p>
+                      <p style={{margin:"3px 0 0",fontSize:13,color:C.muted}}>
+                        {empName(empId)}{!task.isDaily&&` · Due ${task.dueDate}`}
+                      </p>
+                    </div>
+                  </div>
+                  <div style={{display:"flex",gap:8}}>
+                    <button style={S.btnSuccess} onClick={()=>approveTask(task.id,empId)}>Approve</button>
+                    <button style={S.btnDanger}  onClick={()=>{setRejectModal({taskId:task.id,empId});setRejectComment("");}}>Reject</button>
+                  </div>
+                </div>
+              </div>
+          ))}
+        </>}
+
+        {/* ─ Employees ─ */}
+        {tab==="employees" && <>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
+            <h3 style={{fontSize:15,fontWeight:700,margin:0}}>Team</h3>
+            <button style={S.btnPrimary} onClick={()=>{setFormErr("");setAddEmpOpen(true);}}>+ Add</button>
+          </div>
+          {employees.map(emp=>{
+            const total   = getEmpTasks(emp.id).length;
+            const done    = state.tasks.filter(t=>t.assignedTo.includes(emp.id)&&getStatus(t,emp.id)?.state==="done").length;
+            const pending = state.tasks.filter(t=>t.assignedTo.includes(emp.id)&&getStatus(t,emp.id)?.state==="pending").length;
+            return (
+              <div key={emp.id} style={{...S.card,opacity:emp.active?1:.55}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:8}}>
+                  <div style={{display:"flex",alignItems:"center",gap:12}}>
+                    <Avatar name={emp.name} size={42}/>
+                    <div>
+                      <p style={{margin:0,fontWeight:700,fontSize:14}}>{emp.name}</p>
+                      <p style={{margin:"2px 0 0",fontSize:12,color:C.muted}}>@{emp.username}{!emp.active&&" · Deactivated"}</p>
+                    </div>
+                  </div>
+                  <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
+                    <Badge label={`${total} tasks`} color={C.blueDark}  bg={C.blueLight}/>
+                    <Badge label={`${done} done`}   color={C.greenDark} bg={C.greenLight}/>
+                    {pending>0&&<Badge label={`${pending} pending`} color={C.amberDark} bg={C.amberLight}/>}
+                    <button style={{...S.btn,fontSize:12,padding:"6px 12px"}}
+                      onClick={()=>emp.active?setDeactivateConfirm(emp.id):toggleDeactivate(emp.id)}>
+                      {emp.active?"Deactivate":"Reactivate"}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </>}
+
+      </div>
+
+      <BottomNav role="master" tab={tab} setTab={setTab} badge={pendingApprovals.length}/>
+      {notifOpen && <NotifDrawer notifs={myNotifs} onClear={clearNotifs} onClose={()=>setNotifOpen(false)}/>}
+
+      {/* ─ Add Task Modal ─ */}
+      {addTaskOpen && (
+        <Modal title="Add new task" onClose={()=>setAddTaskOpen(false)}>
+          {formErr&&<p style={S.error}>{formErr}</p>}
+          <label style={S.label}>Task title *</label>
+          <input style={S.input} value={newTask.title} autoFocus
+            onChange={e=>setNewTask(t=>({...t,title:e.target.value}))} placeholder="e.g. Submit daily report"/>
+          <label style={S.label}>Description</label>
+          <textarea style={S.textarea} value={newTask.desc}
+            onChange={e=>setNewTask(t=>({...t,desc:e.target.value}))} placeholder="Instructions for the employee"/>
+          <label style={S.label}>Due date</label>
+          <input style={{...S.input,marginBottom:8}} type="date" value={newTask.dueDate}
+            min={todayStr()} onChange={e=>setNewTask(t=>({...t,dueDate:e.target.value}))}/>
+          <label style={{display:"flex",alignItems:"center",gap:8,fontSize:13,marginBottom:14,cursor:"pointer"}}>
+            <input type="checkbox" checked={newTask.isDaily} onChange={e=>setNewTask(t=>({...t,isDaily:e.target.checked}))}/>
+            Recurring daily task
+          </label>
+          <label style={S.label}>Assign to *</label>
+          <div style={{marginBottom:16}}>
+            {activeEmps.map(e=>(
+              <label key={e.id} style={{display:"flex",alignItems:"center",gap:10,marginBottom:10,cursor:"pointer",fontSize:14}}>
+                <input type="checkbox" style={{width:18,height:18}}
+                  checked={newTask.assignedTo.includes(e.id)}
+                  onChange={()=>setNewTask(t=>({...t,assignedTo:t.assignedTo.includes(e.id)?t.assignedTo.filter(x=>x!==e.id):[...t.assignedTo,e.id]}))}/>
+                <Avatar name={e.name} size={24}/>
+                {e.name}
+              </label>
+            ))}
+          </div>
+          <div style={{display:"flex",gap:10}}>
+            <button style={S.btnPrimary} onClick={addTask}>Add task</button>
+            <button style={S.btn} onClick={()=>setAddTaskOpen(false)}>Cancel</button>
+          </div>
+        </Modal>
+      )}
+
+      {/* ─ Add Employee Modal ─ */}
+      {addEmpOpen && (
+        <Modal title="Add employee" onClose={()=>setAddEmpOpen(false)}>
+          {formErr&&<p style={S.error}>{formErr}</p>}
+          <label style={S.label}>Full name *</label>
+          <input style={S.input} value={newEmp.name} autoFocus
+            onChange={e=>setNewEmp(n=>({...n,name:e.target.value}))} placeholder="e.g. Ananya Singh"/>
+          <label style={S.label}>Username *</label>
+          <input style={S.input} value={newEmp.username}
+            onChange={e=>setNewEmp(n=>({...n,username:e.target.value}))} placeholder="e.g. ananya"/>
+          <label style={S.label}>Password * (min 4 chars)</label>
+          <input style={S.input} type="password" value={newEmp.password}
+            onChange={e=>setNewEmp(n=>({...n,password:e.target.value}))} placeholder="Set a password"/>
+          <div style={{display:"flex",gap:10,marginTop:4}}>
+            <button style={S.btnPrimary} onClick={addEmployee}>Add employee</button>
+            <button style={S.btn} onClick={()=>setAddEmpOpen(false)}>Cancel</button>
+          </div>
+        </Modal>
+      )}
+
+      {/* ─ Reject Modal ─ */}
+      {rejectModal && (
+        <Modal title="Reject task" onClose={()=>setRejectModal(null)}>
+          <p style={{fontSize:14,color:C.muted,marginTop:0}}>Tell the employee what needs to be fixed.</p>
+          <label style={S.label}>Reason *</label>
+          <textarea style={S.textarea} value={rejectComment} autoFocus
+            onChange={e=>setRejectComment(e.target.value)}
+            placeholder="e.g. Missing Q3 figures. Please include all months."/>
+          <div style={{display:"flex",gap:10}}>
+            <button style={S.btnDanger} onClick={rejectTask}>Reject</button>
+            <button style={S.btn} onClick={()=>setRejectModal(null)}>Cancel</button>
+          </div>
+        </Modal>
+      )}
+
+      {/* ─ Delete Confirm ─ */}
+      {deleteConfirm && (
+        <Modal title="Delete task?" onClose={()=>setDeleteConfirm(null)}>
+          <p style={{fontSize:14,color:C.muted,marginTop:0}}>This removes the task for all employees. Cannot be undone.</p>
+          <div style={{display:"flex",gap:10}}>
+            <button style={S.btnDanger} onClick={()=>deleteTask(deleteConfirm)}>Delete</button>
+            <button style={S.btn} onClick={()=>setDeleteConfirm(null)}>Cancel</button>
+          </div>
+        </Modal>
+      )}
+
+      {/* ─ Deactivate Confirm ─ */}
+      {deactivateConfirm && (
+        <Modal title="Deactivate employee?" onClose={()=>setDeactivateConfirm(null)}>
+          <p style={{fontSize:14,color:C.muted,marginTop:0}}>
+            <strong>{empName(deactivateConfirm)}</strong> won't be able to sign in. History is preserved. You can reactivate anytime.
+          </p>
+          <div style={{display:"flex",gap:10}}>
+            <button style={S.btnDanger} onClick={()=>toggleDeactivate(deactivateConfirm)}>Deactivate</button>
+            <button style={S.btn} onClick={()=>setDeactivateConfirm(null)}>Cancel</button>
+          </div>
+        </Modal>
+      )}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>
