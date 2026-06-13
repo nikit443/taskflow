@@ -11,170 +11,131 @@
 <meta name="apple-mobile-web-app-title" content="TaskFlow"/>
 <link rel="apple-touch-icon" href="./apple-touch-icon.png"/>
 <link rel="icon" type="image/png" href="./icon-192.png"/>
-<meta http-equiv="Content-Security-Policy" content="default-src * 'unsafe-inline' 'unsafe-eval' data: blob:; connect-src * wss: ws:; img-src * data: blob:; script-src * 'unsafe-inline' 'unsafe-eval'; style-src * 'unsafe-inline'; frame-src *;"/>
+<meta http-equiv="Content-Security-Policy" content="default-src * 'unsafe-inline' 'unsafe-eval' data: blob:; connect-src * wss: ws:; img-src * data: blob:; script-src * 'unsafe-inline' 'unsafe-eval'; style-src * 'unsafe-inline';"/>
 <title>TaskFlow</title>
 <style>
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;margin:0;padding:0}
-html,body{font-family:system-ui,-apple-system,sans-serif;min-height:100vh;overscroll-behavior:none;transition:background .3s,color .3s}
+html,body{font-family:system-ui,-apple-system,sans-serif;min-height:100vh;overscroll-behavior:none}
 body.light{background:#f5f5f7;color:#111}
 body.dark{background:#0f0f12;color:#f0f0f0}
 #app{min-height:100vh}
 #splash{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;z-index:9999;transition:opacity .3s}
 body.light #splash{background:#fff}
-body.dark  #splash{background:#0f0f12}
+body.dark #splash{background:#0f0f12}
 @keyframes spin{to{transform:rotate(360deg)}}
 .loader{width:32px;height:32px;border:3px solid #eee;border-top-color:#7F77DD;border-radius:50%;animation:spin .7s linear infinite}
-/* Dark mode overrides handled via CSS vars */
-:root{
-  --bg:#f5f5f7;--surface:#fff;--border:#e0e0e0;--text:#111;--muted:#555;--faint:#999;
-  --input-bg:#fff;--card-bg:#fff;--nav-bg:#fff;--sheet-bg:#fff;
-}
-.dark{
-  --bg:#0f0f12;--surface:#1a1a20;--border:#2a2a35;--text:#f0f0f0;--muted:#aaa;--faint:#666;
-  --input-bg:#22222c;--card-bg:#1a1a20;--nav-bg:#14141a;--sheet-bg:#1e1e28;
-}
 </style>
 </head>
 <body class="light">
 <div id="splash">
   <div style="width:62px;height:62px;background:#7F77DD;border-radius:17px;display:flex;align-items:center;justify-content:center;font-size:30px;color:#fff">✓</div>
   <div class="loader"></div>
-  <p id="st" style="color:#888;font-size:14px;font-weight:500">Starting TaskFlow…</p>
+  <p id="st" style="color:#888;font-size:14px;font-weight:500">Starting…</p>
 </div>
 <div id="app"></div>
+<div id="ib" style="display:none;position:fixed;bottom:0;left:0;right:0;background:#7F77DD;color:#fff;padding:14px 16px;z-index:9999;align-items:center;justify-content:space-between;gap:12px;box-shadow:0 -2px 12px rgba(0,0,0,.2);">
+  <div style="display:flex;align-items:center;gap:10px;"><span style="font-size:24px">✓</span><div><p style="margin:0;font-weight:700;font-size:14px">Install TaskFlow</p><p style="margin:0;font-size:12px;opacity:.85">Add to home screen</p></div></div>
+  <div style="display:flex;gap:8px"><button onclick="installApp()" style="background:#fff;color:#7F77DD;border:none;padding:8px 16px;border-radius:8px;font-weight:700;font-size:13px;cursor:pointer">Install</button><button onclick="document.getElementById('ib').style.display='none'" style="background:rgba(255,255,255,.2);color:#fff;border:none;padding:8px 12px;border-radius:8px;font-size:16px;cursor:pointer">✕</button></div>
+</div>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <script>
-firebase.initializeApp({
-  apiKey:"AIzaSyDg1x927kaAU75R97HWsxSdQaKQ74kcsMw",
-  authDomain:"taskflow-6ac79.firebaseapp.com",
-  databaseURL:"https://taskflow-6ac79-default-rtdb.firebaseio.com",
-  projectId:"taskflow-6ac79",
-  storageBucket:"taskflow-6ac79.firebasestorage.app",
-  messagingSenderId:"574670242546",
-  appId:"1:574670242546:web:9482ef10b1a0e54cf3866b"
-});
+firebase.initializeApp({apiKey:"AIzaSyDg1x927kaAU75R97HWsxSdQaKQ74kcsMw",authDomain:"taskflow-6ac79.firebaseapp.com",databaseURL:"https://taskflow-6ac79-default-rtdb.firebaseio.com",projectId:"taskflow-6ac79",storageBucket:"taskflow-6ac79.firebasestorage.app",messagingSenderId:"574670242546",appId:"1:574670242546:web:9482ef10b1a0e54cf3866b"});
 const DB=firebase.database();
-DB.ref(".info/connected").on("value",s=>{
-  const e=document.getElementById("st");
-  if(e)e.textContent=s.val()?"Loading data…":"Connecting…";
-});
-function hideSplash(){const e=document.getElementById("splash");if(e){e.style.opacity=0;setTimeout(()=>e.remove(),350);}}
-const R=p=>DB.ref(p);
-const dbSet=(p,v)=>R(p).set(v);
-const dbUpd=(p,v)=>R(p).update(v);
-const dbDel=p=>R(p).remove();
-const dbGet=p=>R(p).get().then(s=>s.exists()?s.val():null);
+DB.ref(".info/connected").on("value",s=>{const e=document.getElementById("st");if(e)e.textContent=s.val()?"Loading…":"Connecting…";});
+function hideSplash(){const e=document.getElementById("splash");if(e){e.style.opacity=0;setTimeout(()=>{if(e.parentNode)e.parentNode.removeChild(e);},350);}}
+const dbSet=(p,v)=>DB.ref(p).set(v);
+const dbUpd=(p,v)=>DB.ref(p).update(v);
+const dbDel=p=>DB.ref(p).remove();
+const dbGet=p=>DB.ref(p).get().then(s=>s.exists()?s.val():null);
 const dbPatch=v=>DB.ref().update(v);
-const dbWatch=(p,fn)=>{R(p).on("value",s=>fn(s.exists()?s.val():null));return()=>R(p).off("value");};
+const dbWatch=(p,fn)=>{DB.ref(p).on("value",s=>fn(s.exists()?s.val():null));return()=>DB.ref(p).off("value");};
 function today(){return new Date().toISOString().split("T")[0];}
 function addDays(n){const d=new Date();d.setDate(d.getDate()+n);return d.toISOString().split("T")[0];}
 function daysUntil(s){const a=new Date();a.setHours(0,0,0,0);const b=new Date(s);b.setHours(0,0,0,0);return Math.ceil((b-a)/864e5);}
-function uid(){try{return crypto.randomUUID()}catch{return Date.now().toString(36)+Math.random().toString(36).slice(2)}}
+function genId(){try{return crypto.randomUUID();}catch{return Date.now().toString(36)+Math.random().toString(36).slice(2);}}
 function hashPw(p){let h=5381;for(let i=0;i<p.length;i++)h=((h<<5)+h)^p.charCodeAt(i);return"h_"+(h>>>0).toString(16);}
-function getRl(due,daily,pri){
+function getRl(due,daily){
   if(daily)return{t:"Daily",c:"#534AB7",b:"#EEEDFE"};
   const d=daysUntil(due);
-  if(d<0) return{t:"Overdue",c:"#A32D2D",b:"#FCEBEB"};
+  if(d<0)return{t:"Overdue",c:"#A32D2D",b:"#FCEBEB"};
   if(d===0)return{t:"Due today",c:"#854F0B",b:"#FAEEDA"};
-  if(d<=3) return{t:d+"d left",c:"#A32D2D",b:"#FCEBEB"};
-  if(d<=7) return{t:d+"d left",c:"#854F0B",b:"#FAEEDA"};
+  if(d<=3)return{t:d+"d left",c:"#A32D2D",b:"#FCEBEB"};
+  if(d<=7)return{t:d+"d left",c:"#854F0B",b:"#FAEEDA"};
   if(d<=15)return{t:d+"d left",c:"#3B6D11",b:"#EAF3DE"};
   return{t:d+"d left",c:"#185FA5",b:"#E6F1FB"};
 }
-function tStatus(task,eid){
-  const s=task.statuses&&task.statuses[eid];
-  if(!s)return null;
-  if(task.isDaily&&s.dailyDate!==today())return null;
-  return s;
-}
-const showToday=t=>t.isDaily||daysUntil(t.dueDate)<=1;
-const shouldRem=t=>{const d=daysUntil(t.dueDate);return t.isDaily||[0,1,3,7,15,30].includes(d)||d<0;};
+function tStatus(task,eid){const s=task.statuses&&task.statuses[eid];if(!s)return null;if(task.isDaily&&s.dailyDate!==today())return null;return s;}
+const PRIO={high:{l:"High",c:"#A32D2D",b:"#FCEBEB"},medium:{l:"Medium",c:"#854F0B",b:"#FAEEDA"},low:{l:"Low",c:"#3B6D11",b:"#EAF3DE"}};
+const CATS=["General","Sales","HR","Operations","Finance","Marketing","Tech","Compliance"];
+const WDAYS=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
 const ABG=["#EEEDFE","#E1F5EE","#FAEEDA","#FCEBEB","#E6F1FB","#EAF3DE"];
 const AFG=["#534AB7","#0F6E56","#854F0B","#A32D2D","#185FA5","#3B6D11"];
 function aIdx(s){let h=0;for(let c of s)h=(h<<5)-h+c.charCodeAt(0);return Math.abs(h)%ABG.length;}
 function initials(n){return n.split(" ").map(x=>x[0]).join("").slice(0,2).toUpperCase();}
-const PRIO={high:{l:"High",c:"#A32D2D",b:"#FCEBEB"},medium:{l:"Medium",c:"#854F0B",b:"#FAEEDA"},low:{l:"Low",c:"#3B6D11",b:"#EAF3DE"}};
-const CATS=["General","Sales","HR","Operations","Finance","Marketing","Tech","Compliance"];
-const DAYS_OF_WEEK=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
 let _dp=null;
 window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();_dp=e;setTimeout(()=>{if(_dp){const b=document.getElementById("ib");if(b)b.style.display="flex";}},5000);});
-window.addEventListener("appinstalled",()=>{_dp=null;const b=document.getElementById("ib");if(b)b.remove();});
-function installApp(){if(_dp){_dp.prompt();_dp.userChoice.then(()=>{_dp=null;const b=document.getElementById("ib");if(b)b.remove();});}}
-if("serviceWorker" in navigator){
-  navigator.serviceWorker.getRegistrations().then(rs=>rs.forEach(r=>r.unregister())).then(()=>{
-    navigator.serviceWorker.register("./sw.js").catch(()=>{});
-  });
-}
+window.addEventListener("appinstalled",()=>{_dp=null;});
+function installApp(){if(_dp){_dp.prompt();_dp.userChoice.then(()=>{_dp=null;const b=document.getElementById("ib");if(b)b.style.display="none";});}}
+if("serviceWorker" in navigator){navigator.serviceWorker.getRegistrations().then(rs=>rs.forEach(r=>r.unregister())).then(()=>navigator.serviceWorker.register("./sw.js").catch(()=>{}));}
 </script>
 
 <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-
 <script type="text/babel">
-const {useState,useEffect,useCallback,useMemo,useRef}=React;
+const {useState,useEffect,useMemo,useRef}=React;
 
-// ── Theme hook ────────────────────────────────────────────────────────────────
-function useTheme(){
-  const [dark,setDark]=useState(()=>localStorage.getItem("tf_theme")==="dark");
-  useEffect(()=>{
-    document.body.className=dark?"dark":"light";
-    localStorage.setItem("tf_theme",dark?"dark":"light");
-  },[dark]);
-  return[dark,()=>setDark(d=>!d)];
-}
-
-// ── Dynamic styles ────────────────────────────────────────────────────────────
+// ─── COLOURS ──────────────────────────────────────────────────────────────────
 const P="#7F77DD",PL="#EEEDFE",PD="#534AB7";
 const G="#639922",GL="#EAF3DE",GD="#3B6D11";
 const A="#EF9F27",AL="#FAEEDA",AD="#854F0B";
 const Rd="#E24B4A",RL="#FCEBEB",RD="#A32D2D";
 const Bl="#378ADD",BL="#E6F1FB",BD="#185FA5";
 
-function S(dark){
-  const sur=dark?"#1a1a20":"#fff";
-  const bg =dark?"#0f0f12":"#f5f5f7";
-  const br =dark?"#2a2a35":"#e0e0e0";
-  const txt=dark?"#f0f0f0":"#111";
-  const mt =dark?"#aaa":"#555";
-  const ft =dark?"#666":"#999";
-  const ibg=dark?"#22222c":"#fff";
-  return{
-    sur,bg,br,txt,mt,ft,ibg,
-    card:(x={})=>({background:sur,border:`0.5px solid ${br}`,borderRadius:12,padding:"14px 16px",marginBottom:10,...x}),
-    inp:{width:"100%",padding:"11px 13px",border:`1px solid ${br}`,borderRadius:9,fontSize:15,marginBottom:10,outline:"none",background:ibg,color:txt,WebkitAppearance:"none"},
-    ta: {width:"100%",padding:"11px 13px",border:`1px solid ${br}`,borderRadius:9,fontSize:14,marginBottom:10,outline:"none",background:ibg,color:txt,minHeight:80,resize:"vertical"},
-    lbl:{fontSize:12,color:mt,display:"block",marginBottom:5,fontWeight:600},
-    bp: {background:P,color:"#fff",border:"none",padding:"11px 20px",borderRadius:9,cursor:"pointer",fontSize:14,fontWeight:700,touchAction:"manipulation"},
-    bd: {background:Rd,color:"#fff",border:"none",padding:"8px 14px",borderRadius:8,cursor:"pointer",fontSize:12,fontWeight:600,touchAction:"manipulation"},
-    bs: {background:G,color:"#fff",border:"none",padding:"8px 14px",borderRadius:8,cursor:"pointer",fontSize:12,fontWeight:600,touchAction:"manipulation"},
-    bo: {background:"transparent",color:txt,border:`1px solid ${br}`,padding:"9px 16px",borderRadius:9,cursor:"pointer",fontSize:13,fontWeight:500,touchAction:"manipulation"},
-    ba: {background:A,color:"#fff",border:"none",padding:"8px 14px",borderRadius:8,cursor:"pointer",fontSize:12,fontWeight:600,touchAction:"manipulation"},
-    err:{color:RD,fontSize:13,marginBottom:10,padding:"9px 12px",background:RL,borderRadius:8,lineHeight:1.5},
-    bdg:(c,b)=>({display:"inline-block",padding:"2px 8px",borderRadius:20,fontSize:11,fontWeight:700,color:c,background:b,marginLeft:4,whiteSpace:"nowrap"}),
-    sc: (c,b)=>({background:b,borderRadius:11,padding:"12px 8px",textAlign:"center",flex:1,minWidth:64}),
-    sel:{width:"100%",padding:"10px 12px",border:`1px solid ${br}`,borderRadius:9,fontSize:14,marginBottom:10,outline:"none",background:ibg,color:txt},
-  };
+// ─── THEME ────────────────────────────────────────────────────────────────────
+function useTheme(){
+  const [dark,setDark]=useState(()=>localStorage.getItem("tf_theme")==="dark");
+  useEffect(()=>{document.body.className=dark?"dark":"light";localStorage.setItem("tf_theme",dark?"dark":"light");},[dark]);
+  return[dark,()=>setDark(d=>!d)];
 }
 
-// ── Components ────────────────────────────────────────────────────────────────
+// ─── STYLES ───────────────────────────────────────────────────────────────────
+function mkS(dark){
+  const sur=dark?"#1a1a20":"#fff",bg=dark?"#0f0f12":"#f5f5f7",br=dark?"#2a2a35":"#e0e0e0";
+  const txt=dark?"#f0f0f0":"#111",mt=dark?"#aaa":"#555",ft=dark?"#666":"#999",ibg=dark?"#22222c":"#fff";
+  const card=(x={})=>({background:sur,border:`0.5px solid ${br}`,borderRadius:12,padding:"14px 16px",marginBottom:10,...x});
+  const inp={width:"100%",padding:"11px 13px",border:`1px solid ${br}`,borderRadius:9,fontSize:15,marginBottom:10,outline:"none",background:ibg,color:txt};
+  const ta={width:"100%",padding:"11px 13px",border:`1px solid ${br}`,borderRadius:9,fontSize:14,marginBottom:10,outline:"none",background:ibg,color:txt,minHeight:76,resize:"vertical"};
+  const sel={width:"100%",padding:"10px 12px",border:`1px solid ${br}`,borderRadius:9,fontSize:14,marginBottom:10,outline:"none",background:ibg,color:txt};
+  const lbl={fontSize:12,color:mt,display:"block",marginBottom:5,fontWeight:600};
+  const bp={background:P,color:"#fff",border:"none",padding:"11px 20px",borderRadius:9,cursor:"pointer",fontSize:14,fontWeight:700,touchAction:"manipulation"};
+  const bd={background:Rd,color:"#fff",border:"none",padding:"8px 14px",borderRadius:8,cursor:"pointer",fontSize:12,fontWeight:600,touchAction:"manipulation"};
+  const bs={background:G,color:"#fff",border:"none",padding:"8px 14px",borderRadius:8,cursor:"pointer",fontSize:12,fontWeight:600,touchAction:"manipulation"};
+  const bo={background:"transparent",color:txt,border:`1px solid ${br}`,padding:"9px 16px",borderRadius:9,cursor:"pointer",fontSize:13,fontWeight:500,touchAction:"manipulation"};
+  const ba={background:A,color:"#fff",border:"none",padding:"8px 14px",borderRadius:8,cursor:"pointer",fontSize:12,fontWeight:600,touchAction:"manipulation"};
+  const err={color:RD,fontSize:13,marginBottom:10,padding:"9px 12px",background:RL,borderRadius:8,lineHeight:1.5};
+  const bdg=(c,b)=>({display:"inline-block",padding:"2px 8px",borderRadius:20,fontSize:11,fontWeight:700,color:c,background:b,marginLeft:4,whiteSpace:"nowrap"});
+  const sc=(c,b)=>({background:b,borderRadius:11,padding:"12px 8px",textAlign:"center",flex:1,minWidth:64});
+  return{sur,bg,br,txt,mt,ft,ibg,card,inp,ta,sel,lbl,bp,bd,bs,bo,ba,err,bdg,sc};
+}
+
+// ─── SMALL COMPONENTS ─────────────────────────────────────────────────────────
 function Av({name,size=36}){
   const i=aIdx(name);
   return <div style={{width:size,height:size,borderRadius:"50%",background:ABG[i],display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700,fontSize:size*.36,color:AFG[i],flexShrink:0}}>{initials(name)}</div>;
 }
-function Bdg({t,c,b,style={}}){return <span style={{display:"inline-block",padding:"2px 8px",borderRadius:20,fontSize:11,fontWeight:700,color:c,background:b,marginLeft:4,whiteSpace:"nowrap",...style}}>{t}</span>;}
+function Bdg({t,c,b}){return <span style={{display:"inline-block",padding:"2px 8px",borderRadius:20,fontSize:11,fontWeight:700,color:c,background:b,marginLeft:4,whiteSpace:"nowrap"}}>{t}</span>;}
 
 function Sheet({title,onClose,children,s}){
   return(
-    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.55)",display:"flex",alignItems:"flex-end",zIndex:500}}
-      onClick={e=>{if(e.target===e.currentTarget)onClose();}}>
+    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.55)",display:"flex",alignItems:"flex-end",zIndex:500}} onClick={e=>{if(e.target===e.currentTarget)onClose();}}>
       <div style={{background:s.sur,borderRadius:"22px 22px 0 0",width:"100%",maxWidth:540,margin:"0 auto",padding:"0 20px 44px",maxHeight:"92vh",overflowY:"auto",border:`0.5px solid ${s.br}`}}>
         <div style={{width:44,height:5,background:s.br,borderRadius:3,margin:"14px auto 18px"}}/>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:18}}>
           <h2 style={{fontSize:18,fontWeight:700,color:s.txt}}>{title}</h2>
-          <button onClick={onClose} style={{background:"none",border:"none",fontSize:24,color:s.mt,cursor:"pointer",lineHeight:1,padding:"0 4px"}}>×</button>
+          <button onClick={onClose} style={{background:"none",border:"none",fontSize:24,color:s.mt,cursor:"pointer",padding:"0 4px"}}>×</button>
         </div>
         {children}
       </div>
@@ -182,15 +143,14 @@ function Sheet({title,onClose,children,s}){
   );
 }
 
-function BottomNav({role,tab,go,badge,s}){
+function Nav({role,tab,go,badge,s}){
   const tabs=role==="master"
     ?[{k:"today",l:"Today",i:"📋"},{k:"all",l:"All",i:"📁"},{k:"approvals",l:"Approvals",i:"✅"},{k:"team",l:"Team",i:"👥"},{k:"reports",l:"Reports",i:"📊"}]
     :[{k:"today",l:"Today",i:"📋"},{k:"upcoming",l:"Upcoming",i:"📅"}];
   return(
     <nav style={{position:"fixed",bottom:0,left:0,right:0,background:s.sur,borderTop:`0.5px solid ${s.br}`,display:"flex",paddingBottom:"env(safe-area-inset-bottom,6px)",zIndex:200}}>
       {tabs.map(t=>(
-        <button key={t.k} onClick={()=>go(t.k)}
-          style={{flex:1,background:"none",border:"none",cursor:"pointer",padding:"9px 0 5px",display:"flex",flexDirection:"column",alignItems:"center",gap:2,touchAction:"manipulation",position:"relative"}}>
+        <button key={t.k} onClick={()=>go(t.k)} style={{flex:1,background:"none",border:"none",cursor:"pointer",padding:"9px 0 5px",display:"flex",flexDirection:"column",alignItems:"center",gap:2,touchAction:"manipulation",position:"relative"}}>
           <span style={{fontSize:19}}>{t.i}</span>
           <span style={{fontSize:9,fontWeight:tab===t.k?700:400,color:tab===t.k?P:s.ft}}>{t.l}</span>
           {t.k==="approvals"&&badge>0&&<span style={{position:"absolute",top:4,right:"18%",background:Rd,color:"#fff",borderRadius:10,padding:"0 5px",fontSize:9,fontWeight:700,lineHeight:"16px",minWidth:16,textAlign:"center"}}>{badge}</span>}
@@ -204,7 +164,7 @@ function NotifPanel({notifs,onClear,onClose,s}){
   return(
     <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.55)",zIndex:400}} onClick={e=>{if(e.target===e.currentTarget)onClose();}}>
       <div style={{position:"absolute",top:0,right:0,bottom:0,width:Math.min(300,window.innerWidth-30),background:s.sur,overflowY:"auto",boxShadow:"-2px 0 20px rgba(0,0,0,.2)"}}>
-        <div style={{padding:"16px",borderBottom:`0.5px solid ${s.br}`,display:"flex",justifyContent:"space-between",alignItems:"center",position:"sticky",top:0,background:s.sur}}>
+        <div style={{padding:16,borderBottom:`0.5px solid ${s.br}`,display:"flex",justifyContent:"space-between",alignItems:"center",position:"sticky",top:0,background:s.sur}}>
           <span style={{fontWeight:700,fontSize:16,color:s.txt}}>Notifications</span>
           <div style={{display:"flex",gap:8}}>
             {notifs.length>0&&<button style={{...s.bo,fontSize:11,padding:"4px 10px"}} onClick={onClear}>Clear</button>}
@@ -225,434 +185,64 @@ function NotifPanel({notifs,onClear,onClose,s}){
   );
 }
 
-function PriorityDot({p}){
-  const colors={high:RD,medium:AD,low:GD};
-  return <span style={{width:8,height:8,borderRadius:"50%",background:colors[p]||s.ft,display:"inline-block",marginRight:4,flexShrink:0}}/>;
-}
-
-function TaskCard({task,empId,onDone,onDelete,onEdit,manager,s,users}){
-  const [showComments,setShowComments]=useState(false);
-  const [comment,setComment]=useState("");
-  const r=getRl(task.dueDate,task.isDaily,task.priority);
-  const st=tStatus(task,empId);
+// ─── REMINDER SHEET (proper standalone component) ─────────────────────────────
+function RemindSheet({task,empId,users,onClose,onSend,saving,s}){
+  const [msg,setMsg]=useState("");
+  const emp=users[empId];
+  const r=getRl(task.dueDate,task.isDaily);
   const pri=PRIO[task.priority||"medium"];
-  const comments=task.comments?Object.values(task.comments).sort((a,b)=>new Date(a.createdAt)-new Date(b.createdAt)):[];
-
-  async function submitComment(){
-    if(!comment.trim())return;
-    const id=uid();
-    await dbSet("tasks/"+task.id+"/comments/"+id,{
-      id,text:comment,authorId:empId,
-      authorName:users[empId]?.name||"?",
-      createdAt:new Date().toISOString()
-    });
-    setComment("");
-  }
-
+  const templates=[
+    '⏰ Reminder: "'+task.title+'" is '+r.t+'. Please complete it soon.',
+    '🚨 Urgent: "'+task.title+'" needs your attention immediately!',
+    '📋 Please update the status of "'+task.title+'" when done.',
+    '✅ Don\'t forget to mark "'+task.title+'" complete once done.',
+  ];
+  const defaultMsg=templates[0];
   return(
-    <div style={s.card({borderLeft:!manager?`3px solid ${r.c}`:undefined,borderRadius:!manager?"0 12px 12px 0":12})}>
-      <div style={{display:"flex",justifyContent:"space-between",gap:10}}>
-        <div style={{flex:1,minWidth:0}}>
-          <div style={{display:"flex",flexWrap:"wrap",alignItems:"center",gap:3,marginBottom:5}}>
-            <span style={{fontWeight:700,fontSize:14,color:s.txt}}>{task.title}</span>
-            <Bdg t={r.t} c={r.c} b={r.b}/>
-            {task.isDaily&&<Bdg t="Daily" c={BD} b={BL}/>}
-            <Bdg t={pri.l} c={pri.c} b={pri.b}/>
-            {task.category&&task.category!=="General"&&<Bdg t={task.category} c={P} b={PL}/>}
-          </div>
-          {task.desc&&<p style={{fontSize:13,color:s.mt,margin:"0 0 4px",lineHeight:1.45}}>{task.desc}</p>}
-          {!task.isDaily&&<p style={{fontSize:12,color:s.ft,margin:"0 0 4px"}}>Due: {task.dueDate}</p>}
-          {task.recurringDays&&task.recurringDays.length>0&&(
-            <p style={{fontSize:11,color:s.ft,margin:"0 0 4px"}}>Repeats: {task.recurringDays.map(d=>DAYS_OF_WEEK[d]).join(", ")}</p>
-          )}
-          {st?.state==="rejected"&&st.comment&&(
-            <div style={{marginTop:6,padding:"8px 10px",background:RL,borderRadius:8}}>
-              <p style={{margin:0,fontSize:12,color:RD,fontWeight:700}}>Rejected: <span style={{fontWeight:400}}>{st.comment}</span></p>
-            </div>
-          )}
-          {/* Comments */}
-          {comments.length>0&&(
-            <button onClick={()=>setShowComments(v=>!v)}
-              style={{background:"none",border:"none",color:P,fontSize:12,cursor:"pointer",padding:"4px 0",fontWeight:600}}>
-              💬 {comments.length} comment{comments.length>1?"s":""} {showComments?"▲":"▼"}
-            </button>
-          )}
-          {showComments&&(
-            <div style={{marginTop:8,borderTop:`0.5px solid ${s.br}`,paddingTop:8}}>
-              {comments.map(c=>(
-                <div key={c.id} style={{marginBottom:8,padding:"7px 10px",background:s.bg,borderRadius:8}}>
-                  <p style={{fontSize:11,fontWeight:700,color:P,margin:"0 0 2px"}}>{c.authorName}</p>
-                  <p style={{fontSize:13,color:s.txt,margin:0}}>{c.text}</p>
-                  <p style={{fontSize:10,color:s.ft,margin:"2px 0 0"}}>{new Date(c.createdAt).toLocaleString()}</p>
-                </div>
-              ))}
-            </div>
-          )}
-          {/* Add comment */}
-          <div style={{display:"flex",gap:6,marginTop:6}}>
-            <input value={comment} onChange={e=>setComment(e.target.value)}
-              onKeyDown={e=>e.key==="Enter"&&submitComment()}
-              placeholder="Add a comment…"
-              style={{...s.inp,marginBottom:0,fontSize:12,padding:"6px 10px",flex:1}}/>
-            {comment.trim()&&<button onClick={submitComment} style={{...s.bs,padding:"6px 12px",fontSize:12}}>Send</button>}
+    <Sheet title="Send Reminder" onClose={onClose} s={s}>
+      <div style={{...s.card({marginBottom:14}),background:s.bg}}>
+        <div style={{display:"flex",gap:10,alignItems:"center",marginBottom:8}}>
+          <Av name={emp?emp.name:"?"} size={32}/>
+          <div>
+            <p style={{margin:0,fontWeight:700,fontSize:14,color:s.txt}}>{task.title}</p>
+            <p style={{margin:"2px 0 0",fontSize:12,color:s.mt}}>To: {emp?emp.name:"?"}</p>
           </div>
         </div>
-        <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:5,flexShrink:0}}>
-          {manager?(
-            <>
-              <div style={{display:"flex",gap:6}}>
-                <button style={{...s.bo,fontSize:11,padding:"5px 10px"}} onClick={onEdit}>Edit</button>
-                <button style={s.bd} onClick={onDelete}>Del</button>
-              </div>
-              <span style={{fontSize:11,color:!st?s.ft:st.state==="done"?GD:st.state==="pending"?AD:RD}}>
-                {!st?"Not started":st.state==="done"?"Approved":st.state==="pending"?"Awaiting":"Rejected"}
-              </span>
-            </>
-          ):(
-            <>
-              {!st&&<button style={s.bs} onClick={onDone}>Mark done</button>}
-              {st?.state==="pending"  &&<Bdg t="Awaiting…" c={AD} b={AL}/>}
-              {st?.state==="done"     &&<Bdg t="✓ Approved" c={GD} b={GL}/>}
-              {st?.state==="rejected" &&<button style={s.ba} onClick={onDone}>Resubmit</button>}
-            </>
-          )}
+        <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
+          <Bdg t={r.t} c={r.c} b={r.b}/>
+          <Bdg t={pri.l} c={pri.c} b={pri.b}/>
         </div>
       </div>
-    </div>
-  );
-}
-
-// ── Reports component ─────────────────────────────────────────────────────────
-function Reports({tasks,users,s}){
-  const emps=Object.values(users).filter(u=>u.role==="employee"&&u.active);
-  const tArr=Object.values(tasks);
-
-  function empStats(eid){
-    const mine=tArr.filter(t=>t.assignedTo&&t.assignedTo[eid]);
-    const done=mine.filter(t=>{const st=t.statuses&&t.statuses[eid];return st&&st.state==="done";});
-    const pending=mine.filter(t=>{const st=t.statuses&&t.statuses[eid];return st&&st.state==="pending";});
-    const overdue=mine.filter(t=>!t.isDaily&&daysUntil(t.dueDate)<0);
-    const rate=mine.length?Math.round(done.length/mine.length*100):0;
-    return{total:mine.length,done:done.length,pending:pending.length,overdue:overdue.length,rate};
-  }
-
-  // Category breakdown
-  const catBreakdown={};
-  tArr.forEach(t=>{
-    const c=t.category||"General";
-    if(!catBreakdown[c])catBreakdown[c]={total:0,done:0};
-    catBreakdown[c].total++;
-    const anyDone=t.statuses&&Object.values(t.statuses).some(s=>s.state==="done");
-    if(anyDone)catBreakdown[c].done++;
-  });
-
-  // Priority breakdown
-  const priBreak={high:0,medium:0,low:0};
-  tArr.forEach(t=>priBreak[t.priority||"medium"]++);
-
-  const totalDone=tArr.filter(t=>t.statuses&&Object.values(t.statuses).some(s=>s.state==="done")).length;
-  const totalOverdue=tArr.filter(t=>!t.isDaily&&daysUntil(t.dueDate)<0).length;
-  const overallRate=tArr.length?Math.round(totalDone/tArr.length*100):0;
-
-  function exportCSV(){
-    const rows=[["Employee","Total Tasks","Done","Pending","Overdue","Completion %"]];
-    emps.forEach(e=>{
-      const st=empStats(e.id);
-      rows.push([e.name,st.total,st.done,st.pending,st.overdue,st.rate+"%"]);
-    });
-    const csv=rows.map(r=>r.join(",")).join("\n");
-    const blob=new Blob([csv],{type:"text/csv"});
-    const url=URL.createObjectURL(blob);
-    const a=document.createElement("a");
-    a.href=url;a.download="taskflow-report.csv";a.click();
-    URL.revokeObjectURL(url);
-  }
-
-  return(
-    <div style={{padding:"14px 14px 0"}}>
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
-        <h2 style={{fontSize:16,fontWeight:700,color:s.txt,margin:0}}>Reports</h2>
-        <button style={{...s.bp,padding:"8px 14px",fontSize:12}} onClick={exportCSV}>📥 Export CSV</button>
-      </div>
-
-      {/* Overall stats */}
-      <div style={{display:"flex",gap:8,marginBottom:14,flexWrap:"wrap"}}>
-        {[{l:"Total Tasks",v:tArr.length,c:PD,b:PL},{l:"Completed",v:totalDone,c:GD,b:GL},{l:"Overdue",v:totalOverdue,c:RD,b:RL},{l:"Rate",v:overallRate+"%",c:AD,b:AL}].map(x=>(
-          <div key={x.l} style={s.sc(x.c,x.b)}><div style={{fontSize:20,fontWeight:800,color:x.c}}>{x.v}</div><div style={{fontSize:10,color:x.c,opacity:.85}}>{x.l}</div></div>
+      <label style={s.lbl}>Quick messages — tap to select</label>
+      <div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:14}}>
+        {templates.map((t,i)=>(
+          <button key={i} type="button" onClick={()=>setMsg(t)}
+            style={{background:msg===t?PL:s.sur,border:`1px solid ${msg===t?P:s.br}`,borderRadius:8,padding:"9px 12px",textAlign:"left",fontSize:12,color:msg===t?PD:s.txt,cursor:"pointer",lineHeight:1.45}}>
+            {t}
+          </button>
         ))}
       </div>
-
-      {/* Priority breakdown */}
-      <div style={s.card({marginBottom:14})}>
-        <p style={{fontWeight:700,color:s.txt,fontSize:14,marginBottom:10}}>By Priority</p>
-        {Object.entries(priBreak).map(([k,v])=>{
-          const pr=PRIO[k];
-          const pct=tArr.length?Math.round(v/tArr.length*100):0;
-          return(
-            <div key={k} style={{marginBottom:8}}>
-              <div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}>
-                <span style={{fontSize:13,color:s.txt,fontWeight:600}}>{pr.l}</span>
-                <span style={{fontSize:12,color:s.mt}}>{v} tasks ({pct}%)</span>
-              </div>
-              <div style={{height:6,background:s.br,borderRadius:3,overflow:"hidden"}}>
-                <div style={{height:"100%",width:pct+"%",background:pr.c,borderRadius:3,transition:"width .4s"}}/>
-              </div>
-            </div>
-          );
-        })}
+      <label style={s.lbl}>Or type a custom message</label>
+      <textarea style={s.ta} value={msg} onChange={e=>setMsg(e.target.value)} placeholder="Type a custom reminder…"/>
+      <div style={{display:"flex",gap:10}}>
+        <button style={{...s.bp,flex:1}} onClick={()=>onSend(task,empId,msg||defaultMsg)}>
+          {saving?"Sending…":"🔔 Send reminder"}
+        </button>
+        <button style={s.bo} onClick={onClose}>Cancel</button>
       </div>
-
-      {/* Category breakdown */}
-      <div style={s.card({marginBottom:14})}>
-        <p style={{fontWeight:700,color:s.txt,fontSize:14,marginBottom:10}}>By Category</p>
-        {Object.entries(catBreakdown).map(([cat,{total,done}])=>{
-          const pct=total?Math.round(done/total*100):0;
-          return(
-            <div key={cat} style={{marginBottom:8}}>
-              <div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}>
-                <span style={{fontSize:13,color:s.txt,fontWeight:600}}>{cat}</span>
-                <span style={{fontSize:12,color:s.mt}}>{done}/{total} done</span>
-              </div>
-              <div style={{height:6,background:s.br,borderRadius:3,overflow:"hidden"}}>
-                <div style={{height:"100%",width:pct+"%",background:P,borderRadius:3,transition:"width .4s"}}/>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Per employee */}
-      <p style={{fontWeight:700,color:s.txt,fontSize:14,marginBottom:10}}>Per Employee</p>
-      {emps.map(emp=>{
-        const st=empStats(emp.id);
-        return(
-          <div key={emp.id} style={s.card()}>
-            <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10}}>
-              <Av name={emp.name} size={34}/>
-              <div>
-                <p style={{margin:0,fontWeight:700,fontSize:14,color:s.txt}}>{emp.name}</p>
-                <p style={{margin:0,fontSize:12,color:s.mt}}>{st.total} tasks · {st.rate}% completion</p>
-              </div>
-            </div>
-            <div style={{height:8,background:s.br,borderRadius:4,overflow:"hidden",marginBottom:8}}>
-              <div style={{height:"100%",width:st.rate+"%",background:st.rate>70?GD:st.rate>40?AD:RD,borderRadius:4,transition:"width .4s"}}/>
-            </div>
-            <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
-              <Bdg t={st.done+" done"} c={GD} b={GL}/>
-              <Bdg t={st.pending+" pending"} c={AD} b={AL}/>
-              {st.overdue>0&&<Bdg t={st.overdue+" overdue"} c={RD} b={RL}/>}
-            </div>
-          </div>
-        );
-      })}
-    </div>
+    </Sheet>
   );
 }
 
-// ── Calendar view ─────────────────────────────────────────────────────────────
-function CalendarView({tasks,empId,s}){
-  const [month,setMonth]=useState(new Date());
-  const year=month.getFullYear(),mon=month.getMonth();
-  const firstDay=new Date(year,mon,1).getDay();
-  const daysInMonth=new Date(year,mon+1,0).getDate();
-  const tArr=Object.values(tasks).filter(t=>!empId||(t.assignedTo&&t.assignedTo[empId]));
-
-  function tasksOnDay(d){
-    const dateStr=`${year}-${String(mon+1).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
-    return tArr.filter(t=>t.dueDate===dateStr||t.isDaily);
-  }
-
-  const months=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-
+// ─── TASK FORM (proper standalone component) ──────────────────────────────────
+function TaskForm({isEdit,nt,setNt,actE,fe,saving,onSave,onCancel,s}){
   return(
-    <div style={s.card({marginBottom:14})}>
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
-        <button onClick={()=>setMonth(new Date(year,mon-1,1))} style={{...s.bo,padding:"4px 10px"}}>‹</button>
-        <span style={{fontWeight:700,color:s.txt}}>{months[mon]} {year}</span>
-        <button onClick={()=>setMonth(new Date(year,mon+1,1))} style={{...s.bo,padding:"4px 10px"}}>›</button>
-      </div>
-      <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:2,marginBottom:4}}>
-        {["S","M","T","W","T","F","S"].map((d,i)=><div key={i} style={{textAlign:"center",fontSize:10,color:s.ft,fontWeight:600,padding:"2px 0"}}>{d}</div>)}
-      </div>
-      <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:2}}>
-        {Array(firstDay).fill(null).map((_,i)=><div key={"e"+i}/>)}
-        {Array(daysInMonth).fill(null).map((_,i)=>{
-          const d=i+1;
-          const dt=tasksOnDay(d);
-          const isToday=new Date().getDate()===d&&new Date().getMonth()===mon&&new Date().getFullYear()===year;
-          return(
-            <div key={d} style={{textAlign:"center",padding:"4px 2px",borderRadius:6,background:isToday?PL:"transparent",border:isToday?`1px solid ${P}`:"1px solid transparent"}}>
-              <span style={{fontSize:11,color:isToday?PD:s.txt,fontWeight:isToday?700:400}}>{d}</span>
-              {dt.length>0&&<div style={{display:"flex",justifyContent:"center",gap:1,marginTop:2,flexWrap:"wrap"}}>
-                {dt.slice(0,3).map((t,ti)=>{
-                  const pr=PRIO[t.priority||"medium"];
-                  return<div key={ti} style={{width:5,height:5,borderRadius:"50%",background:pr.c}}/>;
-                })}
-              </div>}
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-// ── Main App ──────────────────────────────────────────────────────────────────
-function App(){
-  const [dark,toggleDark]=useTheme();
-  const [ready,   setReady]  = useState(false);
-  const [connErr, setConnErr]= useState(false);
-  const [users,   setUsers]  = useState({});
-  const [tasks,   setTasks]  = useState({});
-  const [notifs,  setNotifs] = useState({});
-  const [me,      setMe]     = useState(null);
-  const [form,    setForm]   = useState({u:"",p:""});
-  const [showPw,  setShowPw] = useState(false);
-  const [loginErr,setLoginErr]=useState("");
-  const [saving,  setSaving] = useState(false);
-  const [tab,     setTab]    = useState("today");
-  const [fEmp,    setFEmp]   = useState("all");
-  const [fCat,    setFCat]   = useState("all");
-  const [fPri,    setFPri]   = useState("all");
-  const [nOpen,   setNOpen]  = useState(false);
-  const [addT,    setAddT]   = useState(false);
-  const [addE,    setAddE]   = useState(false);
-  const [editTask,setEditTask]=useState(null);
-  const [rejQ,    setRejQ]   = useState(null);
-  const [delQ,    setDelQ]   = useState(null);
-  const [deaQ,    setDeaQ]   = useState(null);
-  const [showCal, setShowCal]= useState(false);
-  const [nt,setNt]=useState({title:"",desc:"",assignedTo:{},dueDate:addDays(1),isDaily:false,priority:"medium",category:"General",recurringDays:[],reminderDays:1});
-  const [ne,setNe]=useState({name:"",username:"",password:"",department:""});
-  const [rc,setRc]=useState("");
-  const [fe,setFe]=useState("");
-
-  const s=useMemo(()=>S(dark),[dark]);
-
-  useEffect(()=>{
-    const to=setTimeout(()=>{if(!ready){setConnErr(true);hideSplash();setReady(true);}},15000);
-    const u1=dbWatch("users",   v=>{setUsers(v||{});});
-    const u2=dbWatch("tasks",   v=>{setTasks(v||{});clearTimeout(to);setReady(true);hideSplash();});
-    const u3=dbWatch("notifications",v=>setNotifs(v||{}));
-    return()=>{u1();u2();u3();clearTimeout(to);};
-  },[]);
-
-  async function push(userId,msg){
-    const id=uid();
-    await dbSet("notifications/"+id,{id,userId,message:msg,read:false,createdAt:new Date().toISOString()});
-  }
-
-  function login(){
-    const u=Object.values(users).find(u=>u.username===form.u&&u.passwordHash===hashPw(form.p));
-    if(!u){setLoginErr("Wrong username or password.");return;}
-    if(!u.active){setLoginErr("Account deactivated.");return;}
-    setMe(u);setLoginErr("");
-    const up={};
-    Object.entries(notifs).filter(([,n])=>n.userId===u.id&&!n.read).forEach(([id])=>up["notifications/"+id+"/read"]=true);
-    if(Object.keys(up).length)dbPatch(up).catch(()=>{});
-  }
-  function logout(){setMe(null);setForm({u:"",p:""});setTab("today");}
-
-  async function markDone(tid,eid){
-    setSaving(true);
-    await dbUpd("tasks/"+tid+"/statuses/"+eid,{state:"pending",comment:"",dailyDate:today()});
-    const t=tasks[tid],e=users[eid];
-    if(t&&e)await push("admin",e.name+' submitted "'+t.title+'" for approval.');
-    setSaving(false);
-  }
-  async function approve(tid,eid){
-    setSaving(true);
-    await dbUpd("tasks/"+tid+"/statuses/"+eid,{state:"done",comment:"",dailyDate:today()});
-    const t=tasks[tid];
-    if(t)await push(eid,'✓ "'+t.title+'" was approved.');
-    setSaving(false);
-  }
-  async function reject(){
-    if(!rc.trim())return;
-    const{tid,eid}=rejQ;setSaving(true);
-    await dbUpd("tasks/"+tid+"/statuses/"+eid,{state:"rejected",comment:rc,dailyDate:today()});
-    const t=tasks[tid];
-    if(t)await push(eid,'"'+t.title+'" was rejected: '+rc);
-    setRejQ(null);setRc("");setSaving(false);
-  }
-  async function delTask(id){setSaving(true);await dbDel("tasks/"+id);setDelQ(null);setSaving(false);}
-
-  async function saveTask(isEdit=false){
-    if(!nt.title.trim()){setFe("Title required.");return;}
-    if(!Object.keys(nt.assignedTo).length){setFe("Assign to at least one person.");return;}
-    setSaving(true);
-    const id=isEdit?editTask.id:uid();
-    const data={...nt,id,statuses:isEdit?(tasks[id]?.statuses||{}):{},createdAt:isEdit?(tasks[id]?.createdAt||new Date().toISOString()):new Date().toISOString(),createdBy:me.id,updatedAt:new Date().toISOString()};
-    await dbSet("tasks/"+id,data);
-    if(!isEdit){
-      for(const eid of Object.keys(nt.assignedTo))await push(eid,'New task: "'+nt.title+'"');
-    } else {
-      for(const eid of Object.keys(nt.assignedTo))await push(eid,'"'+nt.title+'" was updated.');
-    }
-    setNt({title:"",desc:"",assignedTo:{},dueDate:addDays(1),isDaily:false,priority:"medium",category:"General",recurringDays:[],reminderDays:1});
-    setAddT(false);setEditTask(null);setFe("");setSaving(false);
-  }
-
-  function openEdit(task){
-    setNt({
-      title:task.title||"",desc:task.desc||"",
-      assignedTo:task.assignedTo||{},dueDate:task.dueDate||addDays(1),
-      isDaily:task.isDaily||false,priority:task.priority||"medium",
-      category:task.category||"General",recurringDays:task.recurringDays||[],
-      reminderDays:task.reminderDays||1
-    });
-    setEditTask(task);setFe("");
-  }
-
-  async function addEmp(){
-    if(!ne.name.trim()||!ne.username.trim()||!ne.password.trim()){setFe("All fields required.");return;}
-    if(Object.values(users).find(u=>u.username===ne.username)){setFe("Username taken.");return;}
-    if(ne.password.length<4){setFe("Password min 4 chars.");return;}
-    setSaving(true);
-    const id=uid();
-    await dbSet("users/"+id,{id,username:ne.username,passwordHash:hashPw(ne.password),name:ne.name,role:"employee",active:true,department:ne.department||"General",createdAt:new Date().toISOString()});
-    setNe({name:"",username:"",password:"",department:""});setAddE(false);setFe("");setSaving(false);
-  }
-  async function toggleActive(eid){await dbUpd("users/"+eid,{active:!users[eid].active});setDeaQ(null);}
-  async function clearNotifs(){
-    const up={};
-    Object.entries(notifs).filter(([,n])=>n.userId===me.id).forEach(([id])=>up["notifications/"+id]=null);
-    await dbPatch(up);
-  }
-
-  const tArr   = Object.values(tasks);
-  const emps   = Object.values(users).filter(u=>u.role==="employee");
-  const actE   = emps.filter(e=>e.active);
-  const myN    = me?Object.values(notifs).filter(n=>n.userId===me.id&&n.id!=="__init__").sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)):[];
-  const unread = myN.filter(n=>!n.read).length;
-  const eName  = id=>users[id]?.name||"?";
-  const eTasks = id=>tArr.filter(t=>t.assignedTo&&t.assignedTo[id]);
-  const overdue= tArr.filter(t=>!t.isDaily&&daysUntil(t.dueDate)<0).length;
-  const pending= tArr.flatMap(t=>{
-    if(!t.statuses)return[];
-    return Object.entries(t.statuses)
-      .filter(([,st])=>!(t.isDaily&&st.dailyDate!==today())&&st.state==="pending")
-      .map(([eid])=>({task:t,eid}));
-  });
-
-  // Filtered tasks for manager
-  function filteredEmpTasks(empId,mode){
-    let ts=mode==="today"?eTasks(empId).filter(t=>showToday(t)):eTasks(empId);
-    if(fCat!=="all")ts=ts.filter(t=>(t.category||"General")===fCat);
-    if(fPri!=="all")ts=ts.filter(t=>(t.priority||"medium")===fPri);
-    return ts;
-  }
-  const shownEmps=fEmp==="all"?actE:actE.filter(e=>e.id===fEmp);
-
-  // Task form helper
-  function TaskForm({isEdit}){
-    return <>
+    <>
       {fe&&<p style={s.err}>{fe}</p>}
       <label style={s.lbl}>Title *</label>
       <input style={s.inp} value={nt.title} autoFocus onChange={e=>setNt(t=>({...t,title:e.target.value}))} placeholder="e.g. Submit daily report"/>
       <label style={s.lbl}>Description</label>
       <textarea style={s.ta} value={nt.desc} onChange={e=>setNt(t=>({...t,desc:e.target.value}))} placeholder="Instructions for the employee"/>
-
       <div style={{display:"flex",gap:10}}>
         <div style={{flex:1}}>
           <label style={s.lbl}>Priority</label>
@@ -669,41 +259,356 @@ function App(){
           </select>
         </div>
       </div>
-
       <label style={s.lbl}>Due date</label>
       <input style={{...s.inp,marginBottom:8}} type="date" value={nt.dueDate} onChange={e=>setNt(t=>({...t,dueDate:e.target.value}))}/>
-
       <label style={{display:"flex",alignItems:"center",gap:8,fontSize:14,marginBottom:10,cursor:"pointer",color:s.txt}}>
         <input type="checkbox" checked={nt.isDaily} onChange={e=>setNt(t=>({...t,isDaily:e.target.checked}))}/> Daily recurring task
       </label>
-
-      <label style={s.lbl}>Repeat on specific days (optional)</label>
+      <label style={s.lbl}>Repeat on days (optional)</label>
       <div style={{display:"flex",gap:6,marginBottom:12,flexWrap:"wrap"}}>
-        {DAYS_OF_WEEK.map((d,i)=>(
+        {WDAYS.map((d,i)=>(
           <button key={i} type="button"
-            onClick={()=>setNt(t=>({...t,recurringDays:t.recurringDays.includes(i)?t.recurringDays.filter(x=>x!==i):[...t.recurringDays,i]}))}
-            style={{padding:"5px 8px",borderRadius:6,border:`1px solid ${nt.recurringDays.includes(i)?P:s.br}`,background:nt.recurringDays.includes(i)?PL:s.ibg,color:nt.recurringDays.includes(i)?PD:s.mt,fontSize:12,cursor:"pointer",fontWeight:600}}>
-            {d}
+            onClick={()=>setNt(t=>({...t,recurringDays:t.recurringDays.includes(i)?t.recurringDays.filter(x=>x!==i):[...t.recurringDays,i]}))}>
+            <span style={{display:"block",padding:"5px 8px",borderRadius:6,border:`1px solid ${nt.recurringDays.includes(i)?P:s.br}`,background:nt.recurringDays.includes(i)?PL:s.ibg,color:nt.recurringDays.includes(i)?PD:s.mt,fontSize:12,fontWeight:600,cursor:"pointer"}}>{d}</span>
           </button>
         ))}
       </div>
-
       <label style={s.lbl}>Assign to *</label>
       <div style={{marginBottom:14}}>
         {actE.map(e=>(
           <label key={e.id} style={{display:"flex",alignItems:"center",gap:10,marginBottom:10,cursor:"pointer",fontSize:14,color:s.txt}}>
             <input type="checkbox" style={{width:18,height:18}} checked={!!nt.assignedTo[e.id]}
-              onChange={()=>setNt(t=>{const a={...t.assignedTo};a[e.id]?delete a[e.id]:a[e.id]=true;return{...t,assignedTo:a};})}/>
+              onChange={()=>setNt(t=>{const a={...t.assignedTo};if(a[e.id])delete a[e.id];else a[e.id]=true;return{...t,assignedTo:a};})}/>
             <Av name={e.name} size={22}/>{e.name}
             {e.department&&<span style={{fontSize:11,color:s.ft}}>({e.department})</span>}
           </label>
         ))}
       </div>
       <div style={{display:"flex",gap:10}}>
-        <button style={{...s.bp,flex:1}} onClick={()=>saveTask(isEdit)}>{saving?"Saving…":isEdit?"Update task":"Add task"}</button>
-        <button style={s.bo} onClick={()=>{setAddT(false);setEditTask(null);}}>Cancel</button>
+        <button style={{...s.bp,flex:1}} onClick={onSave}>{saving?"Saving…":isEdit?"Update task":"Add task"}</button>
+        <button style={s.bo} onClick={onCancel}>Cancel</button>
       </div>
-    </>;
+    </>
+  );
+}
+
+// ─── TASK CARD ────────────────────────────────────────────────────────────────
+function TaskCard({task,empId,onDone,onDelete,onEdit,onRemind,manager,s,users}){
+  const [showC,setShowC]=useState(false);
+  const [cText,setCText]=useState("");
+  const r=getRl(task.dueDate,task.isDaily);
+  const st=tStatus(task,empId);
+  const pri=PRIO[task.priority||"medium"];
+  const comments=task.comments?Object.values(task.comments).sort((a,b)=>new Date(a.createdAt)-new Date(b.createdAt)):[];
+
+  function addComment(){
+    if(!cText.trim())return;
+    const id=genId();
+    const name=users[empId]?users[empId].name:"?";
+    dbSet("tasks/"+task.id+"/comments/"+id,{id,text:cText,authorId:empId,authorName:name,createdAt:new Date().toISOString()});
+    setCText("");
+  }
+
+  return(
+    <div style={s.card({borderLeft:!manager?"3px solid "+r.c:undefined,borderRadius:!manager?"0 12px 12px 0":12})}>
+      <div style={{display:"flex",justifyContent:"space-between",gap:10}}>
+        <div style={{flex:1,minWidth:0}}>
+          <div style={{display:"flex",flexWrap:"wrap",alignItems:"center",gap:3,marginBottom:5}}>
+            <span style={{fontWeight:700,fontSize:14,color:s.txt}}>{task.title}</span>
+            <Bdg t={r.t} c={r.c} b={r.b}/>
+            {task.isDaily&&<Bdg t="Daily" c={BD} b={BL}/>}
+            <Bdg t={pri.l} c={pri.c} b={pri.b}/>
+            {task.category&&task.category!=="General"&&<Bdg t={task.category} c={PD} b={PL}/>}
+          </div>
+          {task.desc&&<p style={{fontSize:13,color:s.mt,margin:"0 0 4px",lineHeight:1.45}}>{task.desc}</p>}
+          {!task.isDaily&&<p style={{fontSize:12,color:s.ft,margin:"0 0 2px"}}>Due: {task.dueDate}</p>}
+          {task.recurringDays&&task.recurringDays.length>0&&<p style={{fontSize:11,color:s.ft,margin:"0 0 2px"}}>Repeats: {task.recurringDays.map(d=>WDAYS[d]).join(", ")}</p>}
+          {st&&st.state==="rejected"&&st.comment&&(
+            <div style={{marginTop:6,padding:"8px 10px",background:RL,borderRadius:8}}>
+              <p style={{margin:0,fontSize:12,color:RD,fontWeight:700}}>Rejected: <span style={{fontWeight:400}}>{st.comment}</span></p>
+            </div>
+          )}
+          {comments.length>0&&(
+            <button onClick={()=>setShowC(v=>!v)} style={{background:"none",border:"none",color:P,fontSize:12,cursor:"pointer",padding:"4px 0",fontWeight:600}}>
+              💬 {comments.length} comment{comments.length>1?"s":""} {showC?"▲":"▼"}
+            </button>
+          )}
+          {showC&&(
+            <div style={{marginTop:8,borderTop:`0.5px solid ${s.br}`,paddingTop:8}}>
+              {comments.map(c=>(
+                <div key={c.id} style={{marginBottom:8,padding:"7px 10px",background:s.bg,borderRadius:8}}>
+                  <p style={{fontSize:11,fontWeight:700,color:P,margin:"0 0 2px"}}>{c.authorName}</p>
+                  <p style={{fontSize:13,color:s.txt,margin:0}}>{c.text}</p>
+                  <p style={{fontSize:10,color:s.ft,margin:"2px 0 0"}}>{new Date(c.createdAt).toLocaleString()}</p>
+                </div>
+              ))}
+            </div>
+          )}
+          <div style={{display:"flex",gap:6,marginTop:6}}>
+            <input value={cText} onChange={e=>setCText(e.target.value)} onKeyDown={e=>e.key==="Enter"&&addComment()}
+              placeholder="Add a comment…" style={{...s.inp,marginBottom:0,fontSize:12,padding:"6px 10px",flex:1}}/>
+            {cText.trim()&&<button onClick={addComment} style={{...s.bs,padding:"6px 12px",fontSize:12}}>Send</button>}
+          </div>
+        </div>
+        <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:5,flexShrink:0}}>
+          {manager?(
+            <>
+              <div style={{display:"flex",gap:4,flexWrap:"wrap",justifyContent:"flex-end"}}>
+                <button style={{...s.bo,fontSize:11,padding:"5px 9px"}} onClick={onEdit}>Edit</button>
+                <button style={{...s.bo,fontSize:11,padding:"5px 9px",color:AD,borderColor:A}} onClick={onRemind}>🔔</button>
+                <button style={{...s.bd,fontSize:11,padding:"5px 9px"}} onClick={onDelete}>Del</button>
+              </div>
+              <span style={{fontSize:11,color:!st?s.ft:st.state==="done"?GD:st.state==="pending"?AD:RD}}>
+                {!st?"Not started":st.state==="done"?"Approved":st.state==="pending"?"Awaiting":"Rejected"}
+              </span>
+            </>
+          ):(
+            <>
+              {!st&&<button style={s.bs} onClick={onDone}>Mark done</button>}
+              {st&&st.state==="pending"&&<Bdg t="Awaiting…" c={AD} b={AL}/>}
+              {st&&st.state==="done"&&<Bdg t="✓ Approved" c={GD} b={GL}/>}
+              {st&&st.state==="rejected"&&<button style={s.ba} onClick={onDone}>Resubmit</button>}
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── REPORTS ──────────────────────────────────────────────────────────────────
+function Reports({tasks,users,s}){
+  const emps=Object.values(users).filter(u=>u.role==="employee"&&u.active);
+  const tArr=Object.values(tasks);
+  function empStats(eid){
+    const mine=tArr.filter(t=>t.assignedTo&&t.assignedTo[eid]);
+    const done=mine.filter(t=>{const st=t.statuses&&t.statuses[eid];return st&&st.state==="done";}).length;
+    const pending=mine.filter(t=>{const st=t.statuses&&t.statuses[eid];return st&&st.state==="pending";}).length;
+    const overdue=mine.filter(t=>!t.isDaily&&daysUntil(t.dueDate)<0).length;
+    return{total:mine.length,done,pending,overdue,rate:mine.length?Math.round(done/mine.length*100):0};
+  }
+  const catBk={};
+  tArr.forEach(t=>{const c=t.category||"General";if(!catBk[c])catBk[c]={total:0,done:0};catBk[c].total++;if(t.statuses&&Object.values(t.statuses).some(s=>s.state==="done"))catBk[c].done++;});
+  const priBk={high:0,medium:0,low:0};
+  tArr.forEach(t=>priBk[t.priority||"medium"]++);
+  const totalDone=tArr.filter(t=>t.statuses&&Object.values(t.statuses).some(s=>s.state==="done")).length;
+  const totalOD=tArr.filter(t=>!t.isDaily&&daysUntil(t.dueDate)<0).length;
+  const rate=tArr.length?Math.round(totalDone/tArr.length*100):0;
+
+  function exportCSV(){
+    const rows=[["Employee","Total","Done","Pending","Overdue","Rate"]];
+    emps.forEach(e=>{const st=empStats(e.id);rows.push([e.name,st.total,st.done,st.pending,st.overdue,st.rate+"%"]);});
+    const csv=rows.map(r=>r.join(",")).join("\n");
+    const a=document.createElement("a");
+    a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"}));
+    a.download="taskflow-report.csv";a.click();
+  }
+
+  return(
+    <div style={{padding:"14px 14px 0"}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
+        <h2 style={{fontSize:16,fontWeight:700,color:s.txt,margin:0}}>Reports</h2>
+        <button style={{...s.bp,padding:"8px 14px",fontSize:12}} onClick={exportCSV}>📥 Export CSV</button>
+      </div>
+      <div style={{display:"flex",gap:8,marginBottom:14,flexWrap:"wrap"}}>
+        {[{l:"Total",v:tArr.length,c:PD,b:PL},{l:"Done",v:totalDone,c:GD,b:GL},{l:"Overdue",v:totalOD,c:RD,b:RL},{l:"Rate",v:rate+"%",c:AD,b:AL}].map(x=>(
+          <div key={x.l} style={s.sc(x.c,x.b)}><div style={{fontSize:20,fontWeight:800,color:x.c}}>{x.v}</div><div style={{fontSize:10,color:x.c,opacity:.85}}>{x.l}</div></div>
+        ))}
+      </div>
+      <div style={s.card({marginBottom:14})}>
+        <p style={{fontWeight:700,color:s.txt,fontSize:14,marginBottom:10}}>By Priority</p>
+        {Object.entries(priBk).map(([k,v])=>{const pr=PRIO[k];const pct=tArr.length?Math.round(v/tArr.length*100):0;return(
+          <div key={k} style={{marginBottom:8}}>
+            <div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}><span style={{fontSize:13,color:s.txt,fontWeight:600}}>{pr.l}</span><span style={{fontSize:12,color:s.mt}}>{v} ({pct}%)</span></div>
+            <div style={{height:6,background:s.br,borderRadius:3,overflow:"hidden"}}><div style={{height:"100%",width:pct+"%",background:pr.c,borderRadius:3}}/></div>
+          </div>
+        );})}
+      </div>
+      <div style={s.card({marginBottom:14})}>
+        <p style={{fontWeight:700,color:s.txt,fontSize:14,marginBottom:10}}>By Category</p>
+        {Object.entries(catBk).map(([cat,{total,done}])=>{const pct=total?Math.round(done/total*100):0;return(
+          <div key={cat} style={{marginBottom:8}}>
+            <div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}><span style={{fontSize:13,color:s.txt,fontWeight:600}}>{cat}</span><span style={{fontSize:12,color:s.mt}}>{done}/{total}</span></div>
+            <div style={{height:6,background:s.br,borderRadius:3,overflow:"hidden"}}><div style={{height:"100%",width:pct+"%",background:P,borderRadius:3}}/></div>
+          </div>
+        );})}
+      </div>
+      <p style={{fontWeight:700,color:s.txt,fontSize:14,marginBottom:10}}>Per Employee</p>
+      {emps.map(emp=>{const st=empStats(emp.id);return(
+        <div key={emp.id} style={s.card()}>
+          <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:8}}>
+            <Av name={emp.name} size={34}/>
+            <div><p style={{margin:0,fontWeight:700,fontSize:14,color:s.txt}}>{emp.name}</p><p style={{margin:0,fontSize:12,color:s.mt}}>{st.total} tasks · {st.rate}% done</p></div>
+          </div>
+          <div style={{height:7,background:s.br,borderRadius:4,overflow:"hidden",marginBottom:7}}><div style={{height:"100%",width:st.rate+"%",background:st.rate>70?GD:st.rate>40?AD:RD,borderRadius:4}}/></div>
+          <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+            <Bdg t={st.done+" done"} c={GD} b={GL}/>
+            <Bdg t={st.pending+" pending"} c={AD} b={AL}/>
+            {st.overdue>0&&<Bdg t={st.overdue+" overdue"} c={RD} b={RL}/>}
+          </div>
+        </div>
+      );})}
+    </div>
+  );
+}
+
+// ─── CALENDAR ─────────────────────────────────────────────────────────────────
+function Cal({tasks,s}){
+  const [mo,setMo]=useState(new Date());
+  const yr=mo.getFullYear(),mn=mo.getMonth();
+  const first=new Date(yr,mn,1).getDay(),dim=new Date(yr,mn+1,0).getDate();
+  const tArr=Object.values(tasks);
+  const MONTHS=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  function onDay(d){const ds=yr+"-"+String(mn+1).padStart(2,"0")+"-"+String(d).padStart(2,"0");return tArr.filter(t=>t.dueDate===ds||t.isDaily);}
+  const now=new Date();
+  return(
+    <div style={s.card({marginBottom:14})}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+        <button onClick={()=>setMo(new Date(yr,mn-1,1))} style={{...s.bo,padding:"4px 10px"}}>‹</button>
+        <span style={{fontWeight:700,color:s.txt}}>{MONTHS[mn]} {yr}</span>
+        <button onClick={()=>setMo(new Date(yr,mn+1,1))} style={{...s.bo,padding:"4px 10px"}}>›</button>
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:2,marginBottom:4}}>
+        {"SMTWTFS".split("").map((d,i)=><div key={i} style={{textAlign:"center",fontSize:10,color:s.ft,fontWeight:600,padding:"2px 0"}}>{d}</div>)}
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:2}}>
+        {Array(first).fill(null).map((_,i)=><div key={"e"+i}/>)}
+        {Array(dim).fill(null).map((_,i)=>{
+          const d=i+1,dt=onDay(d);
+          const isTdy=now.getDate()===d&&now.getMonth()===mn&&now.getFullYear()===yr;
+          return(
+            <div key={d} style={{textAlign:"center",padding:"4px 2px",borderRadius:6,background:isTdy?PL:"transparent",border:isTdy?"1px solid "+P:"1px solid transparent"}}>
+              <span style={{fontSize:11,color:isTdy?PD:s.txt,fontWeight:isTdy?700:400}}>{d}</span>
+              {dt.length>0&&<div style={{display:"flex",justifyContent:"center",gap:1,marginTop:2}}>
+                {dt.slice(0,3).map((t,ti)=><div key={ti} style={{width:5,height:5,borderRadius:"50%",background:PRIO[t.priority||"medium"].c}}/>)}
+              </div>}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ─── MAIN APP ─────────────────────────────────────────────────────────────────
+function App(){
+  const [dark,toggleDark]=useTheme();
+  const s=useMemo(()=>mkS(dark),[dark]);
+  const [ready,setReady]=useState(false);
+  const [connErr,setConnErr]=useState(false);
+  const [users,setUsers]=useState({});
+  const [tasks,setTasks]=useState({});
+  const [notifs,setNotifs]=useState({});
+  const [me,setMe]=useState(null);
+  const [form,setForm]=useState({u:"",p:""});
+  const [showPw,setShowPw]=useState(false);
+  const [loginErr,setLoginErr]=useState("");
+  const [saving,setSaving]=useState(false);
+  const [tab,setTab]=useState("today");
+  const [fEmp,setFEmp]=useState("all");
+  const [fCat,setFCat]=useState("all");
+  const [fPri,setFPri]=useState("all");
+  const [nOpen,setNOpen]=useState(false);
+  const [showCal,setShowCal]=useState(false);
+  // modals
+  const [addT,setAddT]=useState(false);
+  const [editT,setEditT]=useState(null);
+  const [addE,setAddE]=useState(false);
+  const [rejQ,setRejQ]=useState(null);
+  const [delQ,setDelQ]=useState(null);
+  const [deaQ,setDeaQ]=useState(null);
+  const [delEmpQ,setDelEmpQ]=useState(null);
+  const [remindQ,setRemindQ]=useState(null);
+  // forms
+  const emptyTask={title:"",desc:"",assignedTo:{},dueDate:addDays(1),isDaily:false,priority:"medium",category:"General",recurringDays:[]};
+  const [nt,setNt]=useState(emptyTask);
+  const [ne,setNe]=useState({name:"",username:"",password:"",department:"General"});
+  const [rc,setRc]=useState("");
+  const [fe,setFe]=useState("");
+
+  useEffect(()=>{
+    const to=setTimeout(()=>{if(!ready){setConnErr(true);hideSplash();setReady(true);}},15000);
+    const u1=dbWatch("users",v=>{setUsers(v||{});});
+    const u2=dbWatch("tasks",v=>{setTasks(v||{});clearTimeout(to);setReady(true);hideSplash();});
+    const u3=dbWatch("notifications",v=>setNotifs(v||{}));
+    return()=>{u1();u2();u3();clearTimeout(to);};
+  },[]);
+
+  async function push(uid,msg){const id=genId();await dbSet("notifications/"+id,{id,userId:uid,message:msg,read:false,createdAt:new Date().toISOString()});}
+
+  function login(){
+    const u=Object.values(users).find(u=>u.username===form.u&&u.passwordHash===hashPw(form.p));
+    if(!u){setLoginErr("Wrong username or password.");return;}
+    if(!u.active){setLoginErr("Account deactivated.");return;}
+    setMe(u);setLoginErr("");
+    const up={};Object.entries(notifs).filter(([,n])=>n.userId===u.id&&!n.read).forEach(([id])=>up["notifications/"+id+"/read"]=true);
+    if(Object.keys(up).length)dbPatch(up).catch(()=>{});
+  }
+  function logout(){setMe(null);setForm({u:"",p:""});setTab("today");}
+
+  async function markDone(tid,eid){setSaving(true);await dbUpd("tasks/"+tid+"/statuses/"+eid,{state:"pending",comment:"",dailyDate:today()});const t=tasks[tid],e=users[eid];if(t&&e)await push("admin",e.name+' submitted "'+t.title+'" for approval.');setSaving(false);}
+  async function approve(tid,eid){setSaving(true);await dbUpd("tasks/"+tid+"/statuses/"+eid,{state:"done",comment:"",dailyDate:today()});const t=tasks[tid];if(t)await push(eid,'✓ "'+t.title+'" was approved.');setSaving(false);}
+  async function reject(){if(!rc.trim())return;const{tid,eid}=rejQ;setSaving(true);await dbUpd("tasks/"+tid+"/statuses/"+eid,{state:"rejected",comment:rc,dailyDate:today()});const t=tasks[tid];if(t)await push(eid,'"'+t.title+'" rejected: '+rc);setRejQ(null);setRc("");setSaving(false);}
+  async function delTask(id){setSaving(true);await dbDel("tasks/"+id);setDelQ(null);setSaving(false);}
+
+  async function saveTask(isEdit){
+    if(!nt.title.trim()){setFe("Title required.");return;}
+    if(!Object.keys(nt.assignedTo).length){setFe("Assign to at least one person.");return;}
+    setSaving(true);
+    const id=isEdit?editT.id:genId();
+    const existing=isEdit?tasks[id]:{};
+    await dbSet("tasks/"+id,{...nt,id,statuses:existing.statuses||{},createdAt:existing.createdAt||new Date().toISOString(),createdBy:me.id,updatedAt:new Date().toISOString()});
+    for(const eid of Object.keys(nt.assignedTo))await push(eid,isEdit?'"'+nt.title+'" was updated.':'New task: "'+nt.title+'"');
+    setNt(emptyTask);setAddT(false);setEditT(null);setFe("");setSaving(false);
+  }
+
+  function openEdit(task){
+    setNt({title:task.title||"",desc:task.desc||"",assignedTo:task.assignedTo||{},dueDate:task.dueDate||addDays(1),isDaily:!!task.isDaily,priority:task.priority||"medium",category:task.category||"General",recurringDays:task.recurringDays||[]});
+    setEditT(task);setFe("");
+  }
+
+  async function addEmp(){
+    if(!ne.name.trim()||!ne.username.trim()||!ne.password.trim()){setFe("All fields required.");return;}
+    if(Object.values(users).find(u=>u.username===ne.username)){setFe("Username taken.");return;}
+    if(ne.password.length<4){setFe("Password min 4 chars.");return;}
+    setSaving(true);const id=genId();
+    await dbSet("users/"+id,{id,username:ne.username,passwordHash:hashPw(ne.password),name:ne.name,role:"employee",active:true,department:ne.department||"General",createdAt:new Date().toISOString()});
+    setNe({name:"",username:"",password:"",department:"General"});setAddE(false);setFe("");setSaving(false);
+  }
+
+  async function toggleActive(eid){await dbUpd("users/"+eid,{active:!users[eid].active});setDeaQ(null);}
+
+  async function deleteEmployee(eid){
+    setSaving(true);
+    const up={"users/"+eid:null};
+    Object.values(tasks).forEach(t=>{
+      if(t.assignedTo&&t.assignedTo[eid])up["tasks/"+t.id+"/assignedTo/"+eid]=null;
+      if(t.statuses&&t.statuses[eid])up["tasks/"+t.id+"/statuses/"+eid]=null;
+    });
+    Object.entries(notifs).filter(([,n])=>n.userId===eid).forEach(([id])=>up["notifications/"+id]=null);
+    await dbPatch(up);setDelEmpQ(null);setSaving(false);
+  }
+
+  async function sendReminder(task,empId,msg){setSaving(true);await push(empId,msg);setRemindQ(null);setSaving(false);}
+
+  async function clearNotifs(){const up={};Object.entries(notifs).filter(([,n])=>n.userId===me.id).forEach(([id])=>up["notifications/"+id]=null);await dbPatch(up);}
+
+  const tArr=Object.values(tasks);
+  const emps=Object.values(users).filter(u=>u.role==="employee");
+  const actE=emps.filter(e=>e.active);
+  const myN=me?Object.values(notifs).filter(n=>n.userId===me.id&&n.id!=="__init__").sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)):[];
+  const unread=myN.filter(n=>!n.read).length;
+  const eName=id=>users[id]?users[id].name:"?";
+  const eTasks=id=>tArr.filter(t=>t.assignedTo&&t.assignedTo[id]);
+  const overdue=tArr.filter(t=>!t.isDaily&&daysUntil(t.dueDate)<0).length;
+  const pending=tArr.flatMap(t=>{if(!t.statuses)return[];return Object.entries(t.statuses).filter(([,st])=>!(t.isDaily&&st.dailyDate!==today())&&st.state==="pending").map(([eid])=>({task:t,eid}));});
+  const shownE=fEmp==="all"?actE:actE.filter(e=>e.id===fEmp);
+
+  function filteredTasks(empId,mode){
+    let ts=mode==="today"?eTasks(empId).filter(t=>t.isDaily||daysUntil(t.dueDate)<=1):eTasks(empId);
+    if(fCat!=="all")ts=ts.filter(t=>(t.category||"General")===fCat);
+    if(fPri!=="all")ts=ts.filter(t=>(t.priority||"medium")===fPri);
+    return ts;
   }
 
   if(!ready)return null;
@@ -712,7 +617,7 @@ function App(){
       <div style={s.card({maxWidth:360,padding:28,textAlign:"center"})}>
         <p style={{fontSize:36,marginBottom:12}}>📡</p>
         <h2 style={{fontSize:17,fontWeight:700,marginBottom:10,color:s.txt}}>Connection failed</h2>
-        <p style={{fontSize:13,color:s.mt,lineHeight:1.6,marginBottom:16}}>Could not connect to Firebase. Check your internet connection.</p>
+        <p style={{fontSize:13,color:s.mt,lineHeight:1.6,marginBottom:16}}>Could not connect to Firebase. Check internet connection.</p>
         <button style={{...s.bp,width:"100%"}} onClick={()=>window.location.reload()}>Retry</button>
       </div>
     </div>
@@ -737,8 +642,7 @@ function App(){
           {loginErr&&<p style={{...s.err,marginTop:10}}>{loginErr}</p>}
           <button style={{...s.bp,width:"100%",padding:13,fontSize:15,marginTop:12}} onClick={login}>Sign in</button>
           <div style={{marginTop:14,padding:"10px 14px",background:s.bg,borderRadius:9,fontSize:12,color:s.mt,lineHeight:1.9}}>
-            <b>Manager:</b> admin / admin123<br/>
-            <b>Staff:</b> emp1/pass1 · emp2/pass2 · emp3/pass3
+            <b>Manager:</b> admin / admin123<br/><b>Staff:</b> emp1/pass1 · emp2/pass2 · emp3/pass3
           </div>
         </div>
       </div>
@@ -765,84 +669,69 @@ function App(){
     </header>
   );
 
-  // ── Employee view ───────────────────────────────────────────────────────────
+  // ── Employee ──
   if(me.role==="employee"){
-    const mine  =tArr.filter(t=>t.assignedTo&&t.assignedTo[me.id]);
-    const todays=mine.filter(t=>showToday(t));
-    const coming=mine.filter(t=>!t.isDaily&&daysUntil(t.dueDate)>1&&shouldRem(t));
-    const done  =mine.filter(t=>{const st=t.statuses&&t.statuses[me.id];return st&&st.state==="done";}).length;
+    const mine=tArr.filter(t=>t.assignedTo&&t.assignedTo[me.id]);
+    const todays=mine.filter(t=>t.isDaily||daysUntil(t.dueDate)<=1);
+    const coming=mine.filter(t=>!t.isDaily&&daysUntil(t.dueDate)>1&&([0,1,3,7,15,30].includes(daysUntil(t.dueDate))||daysUntil(t.dueDate)<0));
+    const done=mine.filter(t=>{const st=t.statuses&&t.statuses[me.id];return st&&st.state==="done";}).length;
     return(
       <div style={{background:s.bg,minHeight:"100vh",paddingBottom:80}}>
         <Hdr/>
         <div style={{padding:"14px 14px 0"}}>
-          <div style={{display:"flex",gap:8,marginBottom:14}}>
+          <div style={{display:"flex",gap:8,marginBottom:12}}>
             {[{l:"Total",v:mine.length,c:PD,b:PL},{l:"Today",v:todays.length,c:AD,b:AL},{l:"Done",v:done,c:GD,b:GL},{l:"Coming",v:coming.length,c:BD,b:BL}].map(x=>(
               <div key={x.l} style={s.sc(x.c,x.b)}><div style={{fontSize:20,fontWeight:800,color:x.c}}>{x.v}</div><div style={{fontSize:10,color:x.c,opacity:.85}}>{x.l}</div></div>
             ))}
           </div>
-          {/* Calendar toggle */}
-          <button onClick={()=>setShowCal(v=>!v)} style={{...s.bo,width:"100%",marginBottom:10,fontSize:13,padding:"8px"}}>
-            📅 {showCal?"Hide":"Show"} Calendar
-          </button>
-          {showCal&&<CalendarView tasks={Object.fromEntries(Object.entries(tasks).filter(([,t])=>t.assignedTo&&t.assignedTo[me.id]))} empId={me.id} s={s}/>}
+          <button onClick={()=>setShowCal(v=>!v)} style={{...s.bo,width:"100%",marginBottom:10,fontSize:13,padding:"8px"}}>📅 {showCal?"Hide":"Show"} Calendar</button>
+          {showCal&&<Cal tasks={Object.fromEntries(Object.entries(tasks).filter(([,t])=>t.assignedTo&&t.assignedTo[me.id]))} s={s}/>}
         </div>
         <div style={{padding:"0 14px"}}>
-          {tab==="today"&&(todays.length===0
-            ?<div style={{textAlign:"center",padding:"50px 0",color:s.ft}}><p style={{fontSize:38}}>🎉</p><p style={{marginTop:10}}>All caught up!</p></div>
-            :todays.map(t=><TaskCard key={t.id} task={t} empId={me.id} onDone={()=>markDone(t.id,me.id)} manager={false} s={s} users={users}/>)
-          )}
-          {tab==="upcoming"&&(coming.length===0
-            ?<div style={{textAlign:"center",padding:"50px 0",color:s.ft}}><p style={{fontSize:38}}>📅</p><p style={{marginTop:10}}>Nothing upcoming.</p></div>
-            :coming.map(t=><TaskCard key={t.id} task={t} empId={me.id} onDone={()=>markDone(t.id,me.id)} manager={false} s={s} users={users}/>)
-          )}
+          {tab==="today"&&(todays.length===0?<div style={{textAlign:"center",padding:"50px 0",color:s.ft}}><p style={{fontSize:38}}>🎉</p><p style={{marginTop:10}}>All caught up!</p></div>
+            :todays.map(t=><TaskCard key={t.id} task={t} empId={me.id} onDone={()=>markDone(t.id,me.id)} manager={false} s={s} users={users}/>))}
+          {tab==="upcoming"&&(coming.length===0?<div style={{textAlign:"center",padding:"50px 0",color:s.ft}}><p style={{fontSize:38}}>📅</p><p style={{marginTop:10}}>Nothing upcoming.</p></div>
+            :coming.map(t=><TaskCard key={t.id} task={t} empId={me.id} onDone={()=>markDone(t.id,me.id)} manager={false} s={s} users={users}/>))}
         </div>
-        <BottomNav role="employee" tab={tab} go={setTab} badge={0} s={s}/>
+        <Nav role="employee" tab={tab} go={setTab} badge={0} s={s}/>
         {nOpen&&<NotifPanel notifs={myN} onClear={clearNotifs} onClose={()=>setNOpen(false)} s={s}/>}
       </div>
     );
   }
 
-  // ── Manager view ────────────────────────────────────────────────────────────
+  // ── Manager ──
   return(
     <div style={{background:s.bg,minHeight:"100vh",paddingBottom:80}}>
       <Hdr/>
       <div style={{padding:"14px 14px 0"}}>
-        <div style={{display:"flex",gap:8,marginBottom:14}}>
+        <div style={{display:"flex",gap:8,marginBottom:12}}>
           {[{l:"Tasks",v:tArr.length,c:PD,b:PL},{l:"Pending",v:pending.length,c:AD,b:AL},{l:"Overdue",v:overdue,c:RD,b:RL},{l:"Team",v:actE.length,c:BD,b:BL}].map(x=>(
             <div key={x.l} style={s.sc(x.c,x.b)}><div style={{fontSize:20,fontWeight:800,color:x.c}}>{x.v}</div><div style={{fontSize:10,color:x.c,opacity:.85}}>{x.l}</div></div>
           ))}
         </div>
       </div>
-
       <div style={{padding:"0 14px"}}>
+
         {(tab==="today"||tab==="all")&&<>
-          {/* Filters */}
-          <div style={{display:"flex",gap:8,marginBottom:10,flexWrap:"wrap"}}>
-            <select style={{...s.sel,marginBottom:0,flex:1,minWidth:100}} value={fEmp} onChange={e=>setFEmp(e.target.value)}>
-              <option value="all">All staff</option>
-              {actE.map(e=><option key={e.id} value={e.id}>{e.name}</option>)}
+          <div style={{display:"flex",gap:6,marginBottom:8,flexWrap:"wrap"}}>
+            <select style={{...s.sel,marginBottom:0,flex:1,minWidth:90}} value={fEmp} onChange={e=>setFEmp(e.target.value)}>
+              <option value="all">All staff</option>{actE.map(e=><option key={e.id} value={e.id}>{e.name}</option>)}
             </select>
-            <select style={{...s.sel,marginBottom:0,flex:1,minWidth:100}} value={fCat} onChange={e=>setFCat(e.target.value)}>
-              <option value="all">All categories</option>
-              {CATS.map(c=><option key={c} value={c}>{c}</option>)}
+            <select style={{...s.sel,marginBottom:0,flex:1,minWidth:90}} value={fCat} onChange={e=>setFCat(e.target.value)}>
+              <option value="all">All categories</option>{CATS.map(c=><option key={c} value={c}>{c}</option>)}
             </select>
             <select style={{...s.sel,marginBottom:0,flex:1,minWidth:80}} value={fPri} onChange={e=>setFPri(e.target.value)}>
               <option value="all">All priority</option>
-              <option value="high">🔴 High</option>
-              <option value="medium">🟡 Medium</option>
-              <option value="low">🟢 Low</option>
+              <option value="high">🔴 High</option><option value="medium">🟡 Medium</option><option value="low">🟢 Low</option>
             </select>
           </div>
-          {/* Calendar */}
-          <button onClick={()=>setShowCal(v=>!v)} style={{...s.bo,width:"100%",marginBottom:10,fontSize:13,padding:"8px"}}>
-            📅 {showCal?"Hide":"Show"} Calendar
-          </button>
-          {showCal&&<CalendarView tasks={tasks} s={s}/>}
-          <div style={{display:"flex",justifyContent:"flex-end",marginBottom:12}}>
-            <button style={s.bp} onClick={()=>{setFe("");setNt({title:"",desc:"",assignedTo:{},dueDate:addDays(1),isDaily:false,priority:"medium",category:"General",recurringDays:[],reminderDays:1});setAddT(true);}}>+ Add task</button>
+          <button onClick={()=>setShowCal(v=>!v)} style={{...s.bo,width:"100%",marginBottom:8,fontSize:13,padding:"8px"}}>📅 {showCal?"Hide":"Show"} Calendar</button>
+          {showCal&&<Cal tasks={tasks} s={s}/>}
+          <div style={{display:"flex",justifyContent:"flex-end",marginBottom:10}}>
+            <button style={s.bp} onClick={()=>{setFe("");setNt(emptyTask);setAddT(true);}}>+ Add task</button>
           </div>
-          {shownEmps.map(emp=>{
-            const et=filteredEmpTasks(emp.id,tab);
+          {shownE.map(emp=>{
+            const et=filteredTasks(emp.id,tab);
             return(
               <div key={emp.id} style={{marginBottom:18}}>
                 <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:7}}>
@@ -852,7 +741,13 @@ function App(){
                   {emp.department&&<Bdg t={emp.department} c={PD} b={PL}/>}
                 </div>
                 {et.length===0?<p style={{fontSize:13,color:s.ft,marginLeft:34}}>No tasks.</p>
-                  :et.map(t=><div key={t.id} style={{marginLeft:34}}><TaskCard task={t} empId={emp.id} onDelete={()=>setDelQ(t.id)} onEdit={()=>openEdit(t)} manager={true} s={s} users={users}/></div>)}
+                  :et.map(t=><div key={t.id} style={{marginLeft:34}}>
+                    <TaskCard task={t} empId={emp.id}
+                      onDelete={()=>setDelQ(t.id)}
+                      onEdit={()=>openEdit(t)}
+                      onRemind={()=>setRemindQ({task:t,empId:emp.id})}
+                      manager={true} s={s} users={users}/>
+                  </div>)}
               </div>
             );
           })}
@@ -860,8 +755,7 @@ function App(){
 
         {tab==="approvals"&&<>
           <h2 style={{fontSize:15,fontWeight:700,marginBottom:14,color:s.txt}}>Pending approvals</h2>
-          {pending.length===0
-            ?<div style={{textAlign:"center",padding:"40px 0",color:s.ft}}><p style={{fontSize:34}}>✅</p><p style={{marginTop:10}}>All clear!</p></div>
+          {pending.length===0?<div style={{textAlign:"center",padding:"40px 0",color:s.ft}}><p style={{fontSize:34}}>✅</p><p style={{marginTop:10}}>All clear!</p></div>
             :pending.map(({task,eid})=>(
               <div key={task.id+"-"+eid} style={s.card()}>
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:10}}>
@@ -882,20 +776,19 @@ function App(){
                   </div>
                 </div>
               </div>
-            ))
-          }
+            ))}
         </>}
 
         {tab==="team"&&<>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
             <h2 style={{fontSize:15,fontWeight:700,color:s.txt,margin:0}}>Team</h2>
-            <button style={s.bp} onClick={()=>{setFe("");setNe({name:"",username:"",password:"",department:""});setAddE(true);}}>+ Add</button>
+            <button style={s.bp} onClick={()=>{setFe("");setNe({name:"",username:"",password:"",department:"General"});setAddE(true);}}>+ Add</button>
           </div>
           {emps.map(emp=>{
             const tot=eTasks(emp.id).length;
-            const dn=tArr.filter(t=>t.assignedTo&&t.assignedTo[emp.id]&&tStatus(t,emp.id)?.state==="done").length;
-            const pn=tArr.filter(t=>t.assignedTo&&t.assignedTo[emp.id]&&tStatus(t,emp.id)?.state==="pending").length;
-            const rate=tot?Math.round(dn/tot*100):0;
+            const dn=tArr.filter(t=>t.assignedTo&&t.assignedTo[emp.id]&&tStatus(t,emp.id)&&tStatus(t,emp.id).state==="done").length;
+            const pn=tArr.filter(t=>t.assignedTo&&t.assignedTo[emp.id]&&tStatus(t,emp.id)&&tStatus(t,emp.id).state==="pending").length;
+            const rt=tot?Math.round(dn/tot*100):0;
             return(
               <div key={emp.id} style={s.card({opacity:emp.active?1:.5})}>
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:8}}>
@@ -907,18 +800,16 @@ function App(){
                       {emp.department&&<Bdg t={emp.department} c={PD} b={PL}/>}
                     </div>
                   </div>
-                  <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
-                    <Bdg t={rate+"%"} c={rate>70?GD:rate>40?AD:RD} b={rate>70?GL:rate>40?AL:RL}/>
+                  <div style={{display:"flex",gap:5,flexWrap:"wrap",alignItems:"center"}}>
+                    <Bdg t={rt+"%"} c={rt>70?GD:rt>40?AD:RD} b={rt>70?GL:rt>40?AL:RL}/>
                     <Bdg t={dn+" done"} c={GD} b={GL}/>
                     {pn>0&&<Bdg t={pn+" pending"} c={AD} b={AL}/>}
-                    <button style={{...s.bo,fontSize:11,padding:"5px 10px"}} onClick={()=>emp.active?setDeaQ(emp.id):toggleActive(emp.id)}>
-                      {emp.active?"Deactivate":"Reactivate"}
-                    </button>
+                    <button style={{...s.bo,fontSize:11,padding:"5px 10px"}} onClick={()=>emp.active?setDeaQ(emp.id):toggleActive(emp.id)}>{emp.active?"Deactivate":"Reactivate"}</button>
+                    <button style={{...s.bo,fontSize:11,padding:"5px 10px",color:RD,borderColor:RD+"66"}} onClick={()=>setDelEmpQ(emp.id)}>Delete</button>
                   </div>
                 </div>
-                {/* Mini progress bar */}
                 <div style={{height:4,background:s.br,borderRadius:2,overflow:"hidden",marginTop:10}}>
-                  <div style={{height:"100%",width:rate+"%",background:rate>70?GD:rate>40?AD:RD,borderRadius:2,transition:"width .4s"}}/>
+                  <div style={{height:"100%",width:rt+"%",background:rt>70?GD:rt>40?AD:RD,borderRadius:2}}/>
                 </div>
               </div>
             );
@@ -928,83 +819,79 @@ function App(){
         {tab==="reports"&&<Reports tasks={tasks} users={users} s={s}/>}
       </div>
 
-      <BottomNav role="master" tab={tab} go={setTab} badge={pending.length} s={s}/>
+      <Nav role="master" tab={tab} go={setTab} badge={pending.length} s={s}/>
       {nOpen&&<NotifPanel notifs={myN} onClear={clearNotifs} onClose={()=>setNOpen(false)} s={s}/>}
 
-      {/* Add Task */}
-      {addT&&<Sheet title="Add new task" onClose={()=>setAddT(false)} s={s}><TaskForm isEdit={false}/></Sheet>}
+      {addT&&<Sheet title="Add new task" onClose={()=>{setAddT(false);setNt(emptyTask);}} s={s}>
+        <TaskForm isEdit={false} nt={nt} setNt={setNt} actE={actE} fe={fe} saving={saving} onSave={()=>saveTask(false)} onCancel={()=>{setAddT(false);setNt(emptyTask);}} s={s}/>
+      </Sheet>}
 
-      {/* Edit Task */}
-      {editTask&&<Sheet title="Edit task" onClose={()=>setEditTask(null)} s={s}><TaskForm isEdit={true}/></Sheet>}
+      {editT&&<Sheet title="Edit task" onClose={()=>setEditT(null)} s={s}>
+        <TaskForm isEdit={true} nt={nt} setNt={setNt} actE={actE} fe={fe} saving={saving} onSave={()=>saveTask(true)} onCancel={()=>setEditT(null)} s={s}/>
+      </Sheet>}
 
-      {/* Add Employee */}
-      {addE&&(
-        <Sheet title="Add employee" onClose={()=>setAddE(false)} s={s}>
-          {fe&&<p style={s.err}>{fe}</p>}
-          <label style={s.lbl}>Full name *</label>
-          <input style={s.inp} value={ne.name} autoFocus onChange={e=>setNe(n=>({...n,name:e.target.value}))} placeholder="e.g. Ananya Singh"/>
-          <label style={s.lbl}>Username *</label>
-          <input style={s.inp} value={ne.username} onChange={e=>setNe(n=>({...n,username:e.target.value}))} placeholder="e.g. ananya"/>
-          <label style={s.lbl}>Password * (min 4 chars)</label>
-          <input style={s.inp} type="password" value={ne.password} onChange={e=>setNe(n=>({...n,password:e.target.value}))} placeholder="Set a password"/>
-          <label style={s.lbl}>Department</label>
-          <select style={s.sel} value={ne.department} onChange={e=>setNe(n=>({...n,department:e.target.value}))}>
-            {CATS.map(c=><option key={c} value={c}>{c}</option>)}
-          </select>
-          <div style={{display:"flex",gap:10,marginTop:4}}>
-            <button style={{...s.bp,flex:1}} onClick={addEmp}>{saving?"Saving…":"Add employee"}</button>
-            <button style={s.bo} onClick={()=>setAddE(false)}>Cancel</button>
-          </div>
-        </Sheet>
-      )}
+      {addE&&<Sheet title="Add employee" onClose={()=>setAddE(false)} s={s}>
+        {fe&&<p style={s.err}>{fe}</p>}
+        <label style={s.lbl}>Full name *</label>
+        <input style={s.inp} value={ne.name} autoFocus onChange={e=>setNe(n=>({...n,name:e.target.value}))} placeholder="e.g. Ananya Singh"/>
+        <label style={s.lbl}>Username *</label>
+        <input style={s.inp} value={ne.username} onChange={e=>setNe(n=>({...n,username:e.target.value}))} placeholder="e.g. ananya"/>
+        <label style={s.lbl}>Password * (min 4 chars)</label>
+        <input style={s.inp} type="password" value={ne.password} onChange={e=>setNe(n=>({...n,password:e.target.value}))} placeholder="Set a password"/>
+        <label style={s.lbl}>Department</label>
+        <select style={s.sel} value={ne.department} onChange={e=>setNe(n=>({...n,department:e.target.value}))}>
+          {CATS.map(c=><option key={c} value={c}>{c}</option>)}
+        </select>
+        <div style={{display:"flex",gap:10,marginTop:4}}>
+          <button style={{...s.bp,flex:1}} onClick={addEmp}>{saving?"Saving…":"Add employee"}</button>
+          <button style={s.bo} onClick={()=>setAddE(false)}>Cancel</button>
+        </div>
+      </Sheet>}
 
-      {rejQ&&(
-        <Sheet title="Reject task" onClose={()=>setRejQ(null)} s={s}>
-          <p style={{fontSize:14,color:s.mt,marginBottom:14}}>Tell the employee what needs to be fixed.</p>
-          <label style={s.lbl}>Reason *</label>
-          <textarea style={{...s.ta,minHeight:90}} value={rc} autoFocus onChange={e=>setRc(e.target.value)} placeholder="e.g. Missing Q3 data. Please resubmit."/>
-          <div style={{display:"flex",gap:10}}>
-            <button style={{...s.bd,flex:1,padding:11}} onClick={reject}>{saving?"Saving…":"Reject"}</button>
-            <button style={s.bo} onClick={()=>setRejQ(null)}>Cancel</button>
-          </div>
-        </Sheet>
-      )}
+      {rejQ&&<Sheet title="Reject task" onClose={()=>setRejQ(null)} s={s}>
+        <p style={{fontSize:14,color:s.mt,marginBottom:14}}>Tell the employee what needs to be fixed.</p>
+        <label style={s.lbl}>Reason *</label>
+        <textarea style={s.ta} value={rc} autoFocus onChange={e=>setRc(e.target.value)} placeholder="e.g. Missing Q3 data."/>
+        <div style={{display:"flex",gap:10}}>
+          <button style={{...s.bd,flex:1,padding:11}} onClick={reject}>{saving?"Saving…":"Reject"}</button>
+          <button style={s.bo} onClick={()=>setRejQ(null)}>Cancel</button>
+        </div>
+      </Sheet>}
 
-      {delQ&&(
-        <Sheet title="Delete task?" onClose={()=>setDelQ(null)} s={s}>
-          <p style={{fontSize:14,color:s.mt,marginBottom:20}}>Removes for all employees. Cannot be undone.</p>
-          <div style={{display:"flex",gap:10}}>
-            <button style={{...s.bd,flex:1,padding:11}} onClick={()=>delTask(delQ)}>{saving?"Deleting…":"Delete"}</button>
-            <button style={s.bo} onClick={()=>setDelQ(null)}>Cancel</button>
-          </div>
-        </Sheet>
-      )}
+      {delQ&&<Sheet title="Delete task?" onClose={()=>setDelQ(null)} s={s}>
+        <p style={{fontSize:14,color:s.mt,marginBottom:20}}>Removes it for all employees. Cannot be undone.</p>
+        <div style={{display:"flex",gap:10}}>
+          <button style={{...s.bd,flex:1,padding:11}} onClick={()=>delTask(delQ)}>{saving?"Deleting…":"Delete"}</button>
+          <button style={s.bo} onClick={()=>setDelQ(null)}>Cancel</button>
+        </div>
+      </Sheet>}
 
-      {deaQ&&(
-        <Sheet title="Deactivate employee?" onClose={()=>setDeaQ(null)} s={s}>
-          <p style={{fontSize:14,color:s.mt,marginBottom:20}}><b>{eName(deaQ)}</b> won't be able to sign in. History preserved. Reactivate anytime.</p>
-          <div style={{display:"flex",gap:10}}>
-            <button style={{...s.bd,flex:1,padding:11}} onClick={()=>toggleActive(deaQ)}>Deactivate</button>
-            <button style={s.bo} onClick={()=>setDeaQ(null)}>Cancel</button>
-          </div>
-        </Sheet>
-      )}
+      {deaQ&&<Sheet title="Deactivate employee?" onClose={()=>setDeaQ(null)} s={s}>
+        <p style={{fontSize:14,color:s.mt,marginBottom:20}}><b>{eName(deaQ)}</b> won't be able to sign in. History preserved. Reactivate anytime.</p>
+        <div style={{display:"flex",gap:10}}>
+          <button style={{...s.bd,flex:1,padding:11}} onClick={()=>toggleActive(deaQ)}>Deactivate</button>
+          <button style={s.bo} onClick={()=>setDeaQ(null)}>Cancel</button>
+        </div>
+      </Sheet>}
+
+      {delEmpQ&&<Sheet title="Permanently delete employee?" onClose={()=>setDelEmpQ(null)} s={s}>
+        <div style={{padding:"12px 14px",background:RL,borderRadius:8,marginBottom:16,border:"1px solid "+RD+"33"}}>
+          <p style={{margin:0,fontSize:13,color:RD,fontWeight:700,marginBottom:4}}>This cannot be undone</p>
+          <p style={{margin:0,fontSize:13,color:RD,lineHeight:1.5}}><b>{eName(delEmpQ)}</b> will be permanently removed from the database along with all their task assignments and notifications.</p>
+        </div>
+        <p style={{fontSize:13,color:s.mt,marginBottom:20}}>Use <b>Deactivate</b> instead if you just want to block login access while keeping history.</p>
+        <div style={{display:"flex",gap:10}}>
+          <button style={{...s.bd,flex:1,padding:11}} onClick={()=>deleteEmployee(delEmpQ)}>{saving?"Deleting…":"Yes, permanently delete"}</button>
+          <button style={s.bo} onClick={()=>setDelEmpQ(null)}>Cancel</button>
+        </div>
+      </Sheet>}
+
+      {remindQ&&<RemindSheet task={remindQ.task} empId={remindQ.empId} users={users} onClose={()=>setRemindQ(null)} onSend={sendReminder} saving={saving} s={s}/>}
     </div>
   );
 }
 
 ReactDOM.createRoot(document.getElementById("app")).render(<App/>);
 </script>
-
-<div id="ib" style="display:none;position:fixed;bottom:0;left:0;right:0;background:#7F77DD;color:#fff;padding:14px 16px;z-index:9999;align-items:center;justify-content:space-between;gap:12px;box-shadow:0 -2px 12px rgba(0,0,0,.2);">
-  <div style="display:flex;align-items:center;gap:10px;">
-    <span style="font-size:24px;">✓</span>
-    <div><p style="margin:0;font-weight:700;font-size:14px;">Install TaskFlow</p><p style="margin:0;font-size:12px;opacity:.85;">Add to home screen</p></div>
-  </div>
-  <div style="display:flex;gap:8px;">
-    <button onclick="installApp()" style="background:#fff;color:#7F77DD;border:none;padding:8px 16px;border-radius:8px;font-weight:700;font-size:13px;cursor:pointer;">Install</button>
-    <button onclick="document.getElementById('ib').style.display='none'" style="background:rgba(255,255,255,.2);color:#fff;border:none;padding:8px 12px;border-radius:8px;font-size:16px;cursor:pointer;">✕</button>
-  </div>
-</div>
 </body>
 </html>
