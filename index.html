@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover"/>
 <link rel="manifest" href="./manifest.json"/>
 <meta name="theme-color" content="#7F77DD"/>
 <meta name="mobile-web-app-capable" content="yes"/>
@@ -10,64 +10,36 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
 <meta name="apple-mobile-web-app-title" content="TaskFlow"/>
 <link rel="apple-touch-icon" href="./apple-touch-icon.png"/>
-<link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png"/>
+<link rel="icon" type="image/png" href="./icon-192.png"/>
+<!-- Critical for PWABuilder APK WebView - allows all Firebase connections -->
+<meta http-equiv="Content-Security-Policy" content="default-src * 'unsafe-inline' 'unsafe-eval' data: blob:; connect-src * wss: ws:; img-src * data: blob:; script-src * 'unsafe-inline' 'unsafe-eval'; style-src * 'unsafe-inline'; frame-src *;"/>
 <title>TaskFlow</title>
 <style>
-*,*::before,*::after{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
-html,body{margin:0;height:100%;overscroll-behavior:none;}
-body{font-family:system-ui,-apple-system,sans-serif;background:#F7F7F8;}
-#root{min-height:100vh;min-height:100dvh;}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;margin:0;padding:0}
+html,body{font-family:system-ui,-apple-system,sans-serif;background:#f5f5f7;min-height:100vh;overscroll-behavior:none}
+#app{min-height:100vh}
+#splash{position:fixed;inset:0;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;z-index:9999;transition:opacity .3s}
 @keyframes spin{to{transform:rotate(360deg)}}
-.spin{width:36px;height:36px;border:3px solid #EEEDFE;border-top-color:#7F77DD;border-radius:50%;animation:spin .8s linear infinite;}
+.loader{width:32px;height:32px;border:3px solid #eee;border-top-color:#7F77DD;border-radius:50%;animation:spin .7s linear infinite}
 </style>
 </head>
 <body>
-<div id="root">
-  <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;gap:16px;">
-    <div style="width:56px;height:56px;border-radius:16px;background:#7F77DD;display:flex;align-items:center;justify-content:center;font-size:28px;color:#fff;font-weight:700;">✓</div>
-    <div class="spin"></div>
-    <p id="load-msg" style="color:#888;font-size:14px;margin:0;">Connecting to database…</p>
-  </div>
+<div id="splash">
+  <div style="width:62px;height:62px;background:#7F77DD;border-radius:17px;display:flex;align-items:center;justify-content:center;font-size:30px;color:#fff">✓</div>
+  <div class="loader"></div>
+  <p id="st" style="color:#888;font-size:14px;font-weight:500">Starting…</p>
 </div>
+<div id="app"></div>
 
-<div id="install-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;background:#7F77DD;color:#fff;padding:14px 16px;z-index:9999;align-items:center;justify-content:space-between;gap:12px;box-shadow:0 -2px 12px rgba(0,0,0,.2);">
-  <div style="display:flex;align-items:center;gap:10px;">
-    <span style="font-size:26px;">✓</span>
-    <div><p style="margin:0;font-weight:700;font-size:14px;">Install TaskFlow</p><p style="margin:0;font-size:12px;opacity:.85;">Add to home screen for quick access</p></div>
-  </div>
-  <div style="display:flex;gap:8px;flex-shrink:0;">
-    <button onclick="installApp()" style="background:#fff;color:#7F77DD;border:none;padding:8px 16px;border-radius:8px;font-weight:700;font-size:13px;cursor:pointer;">Install</button>
-    <button onclick="document.getElementById('install-banner').style.display='none'" style="background:rgba(255,255,255,.2);color:#fff;border:none;padding:8px 12px;border-radius:8px;font-size:16px;cursor:pointer;">✕</button>
-  </div>
-</div>
+<!-- Firebase SDKs - loaded first, before React -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
 <script>
-// Service Worker
-if('serviceWorker' in navigator){
-  window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
-}
-// Install prompt
-let _dp=null;
-window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();_dp=e;setTimeout(()=>{if(_dp){document.getElementById('install-banner').style.display='flex';}},4000);});
-window.addEventListener('appinstalled',()=>{_dp=null;document.getElementById('install-banner').style.display='none';});
-function installApp(){if(_dp){_dp.prompt();_dp.userChoice.then(()=>{_dp=null;document.getElementById('install-banner').style.display='none';});}}
-</script>
-
-<!-- Firebase MUST load first -->
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
-
-<!-- Then React -->
-<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-
-
-
-<script type="text/babel">
-// ─── FIREBASE CONFIG ─────────────────────────────────────────────────────────
-// Replace these 7 values with your own from Firebase Console → Project Settings
-const FIREBASE_CONFIG = {
+// ═══════════════════════════════════════════
+//  FIREBASE CONFIG
+// ═══════════════════════════════════════════
+firebase.initializeApp({
   apiKey:            "AIzaSyDg1x927kaAU75R97HWsxSdQaKQ74kcsMw",
   authDomain:        "taskflow-6ac79.firebaseapp.com",
   databaseURL:       "https://taskflow-6ac79-default-rtdb.firebaseio.com",
@@ -75,539 +47,484 @@ const FIREBASE_CONFIG = {
   storageBucket:     "taskflow-6ac79.firebasestorage.app",
   messagingSenderId: "574670242546",
   appId:             "1:574670242546:web:9482ef10b1a0e54cf3866b"
-};
-// ─────────────────────────────────────────────────────────────────────────────
+});
+const DB = firebase.database();
 
-const { useState, useEffect, useCallback, useRef } = React;
+// Log connection state - visible in browser console
+DB.ref(".info/connected").on("value", s => {
+  console.log("[Firebase] connected =", s.val());
+  setSplash(s.val() ? "Loading data…" : "Connecting…");
+});
+
+function setSplash(t){ const e=document.getElementById("st"); if(e) e.textContent=t; }
+function hideSplash(){ const e=document.getElementById("splash"); if(e){e.style.opacity=0;setTimeout(()=>e.remove(),350);} }
+
+// ── DB helpers ────────────────────────────────────────────────────────────────
+const R      = p    => DB.ref(p);
+const dbSet  = (p,v)=> R(p).set(v);
+const dbUpd  = (p,v)=> R(p).update(v);
+const dbDel  = p    => R(p).remove();
+const dbGet  = p    => R(p).get().then(s=>s.exists()?s.val():null);
+const dbPatch= v    => DB.ref().update(v);
+const dbWatch= (p,fn)=>{ R(p).on("value",s=>fn(s.exists()?s.val():null)); return ()=>R(p).off("value"); };
 
 // ── Utils ─────────────────────────────────────────────────────────────────────
-const todayStr  = () => new Date().toISOString().split("T")[0];
-const addDays   = n  => { const d=new Date(); d.setDate(d.getDate()+n); return d.toISOString().split("T")[0]; };
-const daysUntil = s  => { const n=new Date(); n.setHours(0,0,0,0); const d=new Date(s); d.setHours(0,0,0,0); return Math.ceil((d-n)/86400000); };
-const genId     = () => { try{return crypto.randomUUID();}catch{return Math.random().toString(36).slice(2)+Date.now().toString(36);} };
-const hashPw    = pw => { let h=5381; for(let i=0;i<pw.length;i++) h=((h<<5)+h)^pw.charCodeAt(i); return "h_"+(h>>>0).toString(16); };
-
-function getReminderLabel(dueDate, isDaily) {
-  if (isDaily) return { label:"Daily",     color:"#534AB7", bg:"#EEEDFE" };
-  const d = daysUntil(dueDate);
-  if (d <  0) return { label:"Overdue",    color:"#A32D2D", bg:"#FCEBEB" };
-  if (d === 0) return { label:"Due today", color:"#854F0B", bg:"#FAEEDA" };
-  if (d <= 3)  return { label:`${d}d left`,color:"#A32D2D", bg:"#FCEBEB" };
-  if (d <= 7)  return { label:`${d}d left`,color:"#854F0B", bg:"#FAEEDA" };
-  if (d <= 15) return { label:`${d}d left`,color:"#3B6D11", bg:"#EAF3DE" };
-  return        { label:`${d}d left`,      color:"#185FA5", bg:"#E6F1FB" };
+function today(){ return new Date().toISOString().split("T")[0]; }
+function addDays(n){ const d=new Date(); d.setDate(d.getDate()+n); return d.toISOString().split("T")[0]; }
+function daysUntil(s){ const a=new Date(); a.setHours(0,0,0,0); const b=new Date(s); b.setHours(0,0,0,0); return Math.ceil((b-a)/864e5); }
+function uid(){ try{return crypto.randomUUID()}catch{return Date.now().toString(36)+Math.random().toString(36).slice(2)} }
+function hashPw(p){ let h=5381; for(let i=0;i<p.length;i++) h=((h<<5)+h)^p.charCodeAt(i); return"h_"+(h>>>0).toString(16); }
+function rl(due,daily){
+  if(daily)return{t:"Daily",c:"#534AB7",b:"#EEEDFE"};
+  const d=daysUntil(due);
+  if(d<0) return{t:"Overdue",c:"#A32D2D",b:"#FCEBEB"};
+  if(d===0)return{t:"Due today",c:"#854F0B",b:"#FAEEDA"};
+  if(d<=3) return{t:d+"d left",c:"#A32D2D",b:"#FCEBEB"};
+  if(d<=7) return{t:d+"d left",c:"#854F0B",b:"#FAEEDA"};
+  if(d<=15)return{t:d+"d left",c:"#3B6D11",b:"#EAF3DE"};
+  return{t:d+"d left",c:"#185FA5",b:"#E6F1FB"};
 }
-const shouldShowToday = t => t.isDaily || daysUntil(t.dueDate) <= 1;
-const shouldRemind    = t => { const d=daysUntil(t.dueDate); return t.isDaily||[0,1,3,7,15,30].includes(d)||d<0; };
-const getStatus = (task, empId) => {
-  const s = task.statuses && task.statuses[empId];
-  if (!s) return null;
-  if (task.isDaily && s.dailyDate !== todayStr()) return null;
+function tStatus(task,eid){
+  const s=task.statuses&&task.statuses[eid];
+  if(!s)return null;
+  if(task.isDaily&&s.dailyDate!==today())return null;
   return s;
-};
-
-// ── Firebase DB wrapper ───────────────────────────────────────────────────────
-let _db = null;
-function getDB() {
-  if (!_db) {
-    if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
-    _db = firebase.database();
-  }
-  return _db;
 }
-const dbSet    = (path, val) => getDB().ref(path).set(val);
-const dbUpdate = (path, val) => getDB().ref(path).update(val);
-const dbRemove = (path)      => getDB().ref(path).remove();
-const dbGet    = (path)      => getDB().ref(path).get().then(s => s.exists() ? s.val() : null);
-const dbListen = (path, cb)  => { const r=getDB().ref(path); r.on('value', s=>cb(s.exists()?s.val():null)); return ()=>r.off(); };
-const dbMultiUpdate = (updates) => getDB().ref().update(updates);
+const showToday = t => t.isDaily||daysUntil(t.dueDate)<=1;
+const shouldRem = t => { const d=daysUntil(t.dueDate); return t.isDaily||[0,1,3,7,15,30].includes(d)||d<0; };
 
-// ── Seed initial data if DB is empty ─────────────────────────────────────────
-async function seedIfEmpty() {
-  const existing = await dbGet("users");
-  if (existing) return;
-  document.getElementById("load-msg").textContent = "First-time setup…";
-  const e1=genId(), e2=genId(), e3=genId();
-  const now = new Date().toISOString();
-  await dbSet("users", {
-    admin: { id:"admin", username:"admin", passwordHash:hashPw("admin123"), name:"Manager", role:"master", active:true },
-    [e1]: { id:e1, username:"emp1", passwordHash:hashPw("pass1"), name:"Rahul Sharma", role:"employee", active:true },
-    [e2]: { id:e2, username:"emp2", passwordHash:hashPw("pass2"), name:"Priya Das",    role:"employee", active:true },
-    [e3]: { id:e3, username:"emp3", passwordHash:hashPw("pass3"), name:"Amit Roy",     role:"employee", active:true },
+// Avatar
+const ABG=["#EEEDFE","#E1F5EE","#FAEEDA","#FCEBEB","#E6F1FB","#EAF3DE"];
+const AFG=["#534AB7","#0F6E56","#854F0B","#A32D2D","#185FA5","#3B6D11"];
+function aIdx(s){let h=0;for(let c of s)h=(h<<5)-h+c.charCodeAt(0);return Math.abs(h)%ABG.length;}
+function initials(n){return n.split(" ").map(x=>x[0]).join("").slice(0,2).toUpperCase();}
+
+// Install prompt
+let _dp=null;
+window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();_dp=e;setTimeout(()=>{if(_dp){const b=document.getElementById("ib");if(b)b.style.display="flex";}},5000);});
+window.addEventListener("appinstalled",()=>{_dp=null;const b=document.getElementById("ib");if(b)b.remove();});
+function installApp(){if(_dp){_dp.prompt();_dp.userChoice.then(()=>{_dp=null;const b=document.getElementById("ib");if(b)b.remove();});}}
+
+// Service worker
+if("serviceWorker" in navigator){
+  navigator.serviceWorker.getRegistrations().then(rs=>rs.forEach(r=>r.unregister())).then(()=>{
+    navigator.serviceWorker.register("./sw.js").catch(()=>{});
   });
-  const t1=genId(), t2=genId(), t3=genId();
-  await dbSet("tasks", {
-    [t1]: { id:t1, title:"Submit daily sales report",    desc:"Fill in the sales tracker sheet by end of day.",       assignedTo:{[e1]:true,[e2]:true},        dueDate:todayStr(), isDaily:true,  statuses:{}, createdAt:now, createdBy:"admin" },
-    [t2]: { id:t2, title:"Complete compliance training", desc:"Finish the online compliance module on the HR portal.", assignedTo:{[e1]:true,[e2]:true,[e3]:true}, dueDate:addDays(28),isDaily:false, statuses:{}, createdAt:now, createdBy:"admin" },
-    [t3]: { id:t3, title:"Prepare Q2 review document",   desc:"Summarise Q2 performance across all product lines.",   assignedTo:{[e3]:true},                    dueDate:addDays(7), isDaily:false, statuses:{}, createdAt:now, createdBy:"admin" },
-  });
-  await dbSet("notifications", {});
 }
+</script>
 
-// ── Design ────────────────────────────────────────────────────────────────────
-const C = {
-  purple:"#7F77DD", purpleL:"#EEEDFE", purpleD:"#534AB7",
-  green:"#639922",  greenL:"#EAF3DE",  greenD:"#3B6D11",
-  amber:"#EF9F27",  amberL:"#FAEEDA",  amberD:"#854F0B",
-  red:"#E24B4A",    redL:"#FCEBEB",    redD:"#A32D2D",
-  blue:"#378ADD",   blueL:"#E6F1FB",   blueD:"#185FA5",
-  text:"#1a1a1a", muted:"#666", faint:"#aaa", border:"#e0e0e0", surface:"#fff", bg:"#F7F7F8",
-};
-const S = {
-  card:  { background:C.surface, border:`0.5px solid ${C.border}`, borderRadius:12, padding:"14px 16px", marginBottom:10 },
-  input: { width:"100%", padding:"10px 12px", border:`0.5px solid ${C.border}`, borderRadius:8, fontSize:15, boxSizing:"border-box", marginBottom:10, outline:"none", background:C.surface },
-  textarea: { width:"100%", padding:"10px 12px", border:`0.5px solid ${C.border}`, borderRadius:8, fontSize:14, boxSizing:"border-box", marginBottom:10, minHeight:80, resize:"vertical", outline:"none" },
-  label: { fontSize:12, color:C.muted, display:"block", marginBottom:5, fontWeight:600 },
-  btn:  { padding:"9px 16px", borderRadius:8, border:`0.5px solid ${C.border}`, background:"transparent", cursor:"pointer", fontSize:13, fontWeight:500, touchAction:"manipulation" },
-  btnP: { background:C.purple, color:"#fff", border:"none", padding:"10px 18px", borderRadius:8, cursor:"pointer", fontSize:13, fontWeight:600, touchAction:"manipulation" },
-  btnD: { background:C.red,    color:"#fff", border:"none", padding:"8px 14px",  borderRadius:8, cursor:"pointer", fontSize:12, fontWeight:500, touchAction:"manipulation" },
-  btnS: { background:C.green,  color:"#fff", border:"none", padding:"8px 14px",  borderRadius:8, cursor:"pointer", fontSize:12, fontWeight:500, touchAction:"manipulation" },
-  btnA: { background:C.amber,  color:"#fff", border:"none", padding:"8px 14px",  borderRadius:8, cursor:"pointer", fontSize:12, fontWeight:500, touchAction:"manipulation" },
-  err:  { color:C.redD, fontSize:13, marginBottom:8, padding:"8px 10px", background:C.redL, borderRadius:6 },
-  badge: (cl,bg) => ({ display:"inline-block", padding:"2px 9px", borderRadius:20, fontSize:11, fontWeight:600, color:cl, background:bg, marginLeft:6, whiteSpace:"nowrap" }),
-  summ:  (cl,bg) => ({ background:bg, borderRadius:10, padding:"12px 10px", textAlign:"center", flex:1, minWidth:72 }),
-  row: { display:"flex", gap:10, marginBottom:16, flexWrap:"wrap" },
-};
-const ABGS=["#EEEDFE","#E1F5EE","#FAEEDA","#FCEBEB","#E6F1FB","#EAF3DE","#FBEAF0"];
-const AFGS=["#534AB7","#0F6E56","#854F0B","#A32D2D","#185FA5","#3B6D11","#993556"];
-const aIdx = s => { let h=0; for(let c of s) h=(h<<5)-h+c.charCodeAt(0); return Math.abs(h)%ABGS.length; };
-const initials = n => n.split(" ").map(x=>x[0]).join("").slice(0,2).toUpperCase();
+<!-- React after Firebase -->
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+<script type="text/babel">
+const {useState,useEffect,useRef} = React;
+
+// ── Styles ────────────────────────────────────────────────────────────────────
+const W="#fff",BG="#f5f5f7",BR="#e0e0e0",P="#7F77DD",PL="#EEEDFE",PD="#534AB7";
+const G="#639922",GL="#EAF3DE",GD="#3B6D11";
+const A="#EF9F27",AL="#FAEEDA",AD="#854F0B";
+const Rd="#E24B4A",RL="#FCEBEB",RD="#A32D2D";
+const Bl="#378ADD",BL="#E6F1FB",BD="#185FA5";
+const MT="#555",FT="#999";
+
+const card=(extra={})=>({background:W,border:`0.5px solid ${BR}`,borderRadius:12,padding:"14px 16px",marginBottom:10,...extra});
+const inp ={width:"100%",padding:"11px 13px",border:`1px solid ${BR}`,borderRadius:9,fontSize:15,marginBottom:10,outline:"none",background:W,WebkitAppearance:"none",appearance:"none"};
+const lbl ={fontSize:12,color:MT,display:"block",marginBottom:5,fontWeight:600};
+const bp  ={background:P,color:W,border:"none",padding:"11px 20px",borderRadius:9,cursor:"pointer",fontSize:14,fontWeight:700,touchAction:"manipulation"};
+const bd  ={background:Rd,color:W,border:"none",padding:"8px 14px",borderRadius:8,cursor:"pointer",fontSize:12,fontWeight:600,touchAction:"manipulation"};
+const bs  ={background:G,color:W,border:"none",padding:"8px 14px",borderRadius:8,cursor:"pointer",fontSize:12,fontWeight:600,touchAction:"manipulation"};
+const bo  ={background:"transparent",color:"#333",border:`1px solid ${BR}`,padding:"9px 16px",borderRadius:9,cursor:"pointer",fontSize:13,fontWeight:500,touchAction:"manipulation"};
+const ba  ={background:A,color:W,border:"none",padding:"8px 14px",borderRadius:8,cursor:"pointer",fontSize:12,fontWeight:600,touchAction:"manipulation"};
+const errS={color:RD,fontSize:13,marginBottom:10,padding:"9px 12px",background:RL,borderRadius:8,lineHeight:1.5};
+const bdg =(c,b)=>({display:"inline-block",padding:"2px 9px",borderRadius:20,fontSize:11,fontWeight:700,color:c,background:b,marginLeft:5,whiteSpace:"nowrap"});
+const sc  =(c,b)=>({background:b,borderRadius:11,padding:"12px 8px",textAlign:"center",flex:1,minWidth:68});
 
 // ── Components ────────────────────────────────────────────────────────────────
-const Avatar = ({name, size=36}) => {
-  const i = aIdx(name);
-  return <div style={{width:size,height:size,borderRadius:"50%",background:ABGS[i],display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700,fontSize:size*.36,color:AFGS[i],flexShrink:0}}>{initials(name)}</div>;
+const Av=({name,size=36})=>{
+  const i=aIdx(name);
+  return <div style={{width:size,height:size,borderRadius:"50%",background:ABG[i],display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700,fontSize:size*.36,color:AFG[i],flexShrink:0}}>{initials(name)}</div>;
 };
-const Badge = ({label,color,bg}) => <span style={S.badge(color,bg)}>{label}</span>;
+const Bdg=({t,c,b})=><span style={bdg(c,b)}>{t}</span>;
 
-const Modal = ({title, onClose, children}) => (
-  <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.45)",display:"flex",alignItems:"flex-end",justifyContent:"center",zIndex:200}}
-    onClick={e=>{if(e.target===e.currentTarget)onClose();}}>
-    <div style={{background:C.surface,borderRadius:"20px 20px 0 0",padding:"20px 20px 40px",width:"100%",maxWidth:540,maxHeight:"90vh",overflowY:"auto"}}>
-      <div style={{width:40,height:4,background:C.border,borderRadius:2,margin:"0 auto 16px"}}/>
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
-        <h3 style={{margin:0,fontSize:17,fontWeight:700}}>{title}</h3>
-        <button style={{background:"none",border:"none",cursor:"pointer",fontSize:22,color:C.muted,padding:"0 4px"}} onClick={onClose}>×</button>
-      </div>
-      {children}
-    </div>
-  </div>
-);
-
-const NotifDrawer = ({notifs, onClear, onClose}) => (
-  <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.45)",zIndex:300}} onClick={e=>{if(e.target===e.currentTarget)onClose();}}>
-    <div style={{position:"absolute",top:0,right:0,width:Math.min(320,window.innerWidth),height:"100%",background:C.surface,overflowY:"auto",boxShadow:"-4px 0 20px rgba(0,0,0,.1)"}}>
-      <div style={{padding:"16px 16px 10px",borderBottom:`0.5px solid ${C.border}`,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-        <h3 style={{margin:0,fontSize:16,fontWeight:700}}>Notifications</h3>
-        <div style={{display:"flex",gap:8}}>
-          {notifs.length>0&&<button style={{...S.btn,fontSize:12,padding:"5px 10px"}} onClick={onClear}>Clear all</button>}
-          <button style={{background:"none",border:"none",fontSize:22,cursor:"pointer",color:C.muted}} onClick={onClose}>×</button>
+function Sheet({title,onClose,children}){
+  return(
+    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.5)",display:"flex",alignItems:"flex-end",zIndex:500}}
+      onClick={e=>{if(e.target===e.currentTarget)onClose();}}>
+      <div style={{background:W,borderRadius:"22px 22px 0 0",width:"100%",maxWidth:520,margin:"0 auto",padding:"0 20px 44px",maxHeight:"92vh",overflowY:"auto"}}>
+        <div style={{width:44,height:5,background:BR,borderRadius:3,margin:"14px auto 18px"}}/>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:18}}>
+          <h2 style={{fontSize:18,fontWeight:700,color:"#111"}}>{title}</h2>
+          <button onClick={onClose} style={{background:"none",border:"none",fontSize:24,color:MT,cursor:"pointer",lineHeight:1,padding:"0 4px"}}>×</button>
         </div>
+        {children}
       </div>
-      {notifs.length===0
-        ? <div style={{textAlign:"center",padding:"50px 20px",color:C.faint}}><div style={{fontSize:36}}>🔔</div><p style={{marginTop:12}}>No notifications</p></div>
-        : [...notifs].reverse().map(n=>(
-          <div key={n.id} style={{padding:"12px 16px",borderBottom:`0.5px solid #f5f5f5`,background:n.read?"transparent":"#FAFAFE"}}>
-            <p style={{margin:0,fontSize:13,color:C.text,lineHeight:1.5}}>{n.message}</p>
-            <p style={{margin:"4px 0 0",fontSize:11,color:C.faint}}>{new Date(n.createdAt).toLocaleString()}</p>
-          </div>
-        ))
-      }
-    </div>
-  </div>
-);
-
-const BottomNav = ({role, tab, setTab, badge}) => {
-  const tabs = role==="master"
-    ? [{key:"today",label:"Today",icon:"📋"},{key:"all",label:"All",icon:"📁"},{key:"approvals",label:"Approvals",icon:"✅"},{key:"employees",label:"Team",icon:"👥"}]
-    : [{key:"today",label:"Today",icon:"📋"},{key:"upcoming",label:"Upcoming",icon:"📅"}];
-  return (
-    <div style={{position:"fixed",bottom:0,left:0,right:0,background:C.surface,borderTop:`0.5px solid ${C.border}`,display:"flex",zIndex:100,paddingBottom:"env(safe-area-inset-bottom,8px)"}}>
-      {tabs.map(t=>(
-        <button key={t.key} onClick={()=>setTab(t.key)}
-          style={{flex:1,background:"none",border:"none",cursor:"pointer",padding:"10px 0 6px",display:"flex",flexDirection:"column",alignItems:"center",gap:3,touchAction:"manipulation",position:"relative"}}>
-          <span style={{fontSize:20}}>{t.icon}</span>
-          <span style={{fontSize:10,fontWeight:tab===t.key?700:400,color:tab===t.key?C.purple:C.muted}}>{t.label}</span>
-          {t.key==="approvals"&&badge>0&&<span style={{position:"absolute",top:6,right:"25%",background:C.red,color:"#fff",borderRadius:10,padding:"0 5px",fontSize:9,fontWeight:700}}>{badge}</span>}
-        </button>
-      ))}
     </div>
   );
-};
+}
 
-const TaskCard = ({task, empId, onMarkDone, onDelete, isManager, empUsers}) => {
-  const rl = getReminderLabel(task.dueDate, task.isDaily);
-  const st = getStatus(task, empId);
-  return (
-    <div style={{...S.card, borderLeft:!isManager?`3px solid ${rl.color}`:undefined, borderRadius:!isManager?"0 12px 12px 0":12}}>
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:10}}>
-        <div style={{flex:1,minWidth:0}}>
-          <div style={{display:"flex",alignItems:"center",flexWrap:"wrap",gap:4,marginBottom:4}}>
-            <span style={{fontWeight:600,fontSize:14,color:C.text}}>{task.title}</span>
-            <Badge label={rl.label} color={rl.color} bg={rl.bg}/>
-            {task.isDaily&&<Badge label="Daily" color={C.blueD} bg={C.blueL}/>}
+function BottomNav({role,tab,go,badge}){
+  const tabs=role==="master"
+    ?[{k:"today",l:"Today",i:"📋"},{k:"all",l:"All",i:"📁"},{k:"approvals",l:"Approvals",i:"✅"},{k:"team",l:"Team",i:"👥"}]
+    :[{k:"today",l:"Today",i:"📋"},{k:"upcoming",l:"Upcoming",i:"📅"}];
+  return(
+    <nav style={{position:"fixed",bottom:0,left:0,right:0,background:W,borderTop:`0.5px solid ${BR}`,display:"flex",paddingBottom:"env(safe-area-inset-bottom,6px)",zIndex:200}}>
+      {tabs.map(t=>(
+        <button key={t.k} onClick={()=>go(t.k)}
+          style={{flex:1,background:"none",border:"none",cursor:"pointer",padding:"9px 0 6px",display:"flex",flexDirection:"column",alignItems:"center",gap:2,touchAction:"manipulation",position:"relative"}}>
+          <span style={{fontSize:21}}>{t.i}</span>
+          <span style={{fontSize:10,fontWeight:tab===t.k?700:400,color:tab===t.k?P:FT}}>{t.l}</span>
+          {t.k==="approvals"&&badge>0&&<span style={{position:"absolute",top:5,right:"22%",background:Rd,color:W,borderRadius:10,padding:"0 5px",fontSize:9,fontWeight:700,lineHeight:"16px",minWidth:16,textAlign:"center"}}>{badge}</span>}
+        </button>
+      ))}
+    </nav>
+  );
+}
+
+function NotifPanel({notifs,onClear,onClose}){
+  return(
+    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.5)",zIndex:400}} onClick={e=>{if(e.target===e.currentTarget)onClose();}}>
+      <div style={{position:"absolute",top:0,right:0,bottom:0,width:Math.min(300,window.innerWidth-30),background:W,overflowY:"auto",boxShadow:"-2px 0 20px rgba(0,0,0,.12)"}}>
+        <div style={{padding:"16px",borderBottom:`0.5px solid ${BR}`,display:"flex",justifyContent:"space-between",alignItems:"center",position:"sticky",top:0,background:W}}>
+          <span style={{fontWeight:700,fontSize:16}}>Notifications</span>
+          <div style={{display:"flex",gap:8}}>
+            {notifs.length>0&&<button style={{...bo,fontSize:11,padding:"4px 10px"}} onClick={onClear}>Clear</button>}
+            <button onClick={onClose} style={{background:"none",border:"none",fontSize:22,cursor:"pointer",color:MT}}>×</button>
           </div>
-          {task.desc&&<p style={{fontSize:13,color:C.muted,margin:"0 0 4px",lineHeight:1.4}}>{task.desc}</p>}
-          {!task.isDaily&&<p style={{fontSize:12,color:C.faint,margin:0}}>Due: {task.dueDate}</p>}
-          {st?.state==="rejected"&&st.comment&&(
-            <div style={{marginTop:8,padding:"8px 10px",background:C.redL,borderRadius:8}}>
-              <p style={{margin:0,fontSize:12,color:C.redD,fontWeight:600}}>Rejected</p>
-              <p style={{margin:"2px 0 0",fontSize:12,color:C.redD}}>{st.comment}</p>
+        </div>
+        {notifs.length===0
+          ?<div style={{textAlign:"center",padding:"60px 20px",color:FT}}><p style={{fontSize:32}}>🔔</p><p style={{marginTop:10}}>No notifications</p></div>
+          :[...notifs].reverse().map(n=>(
+            <div key={n.id} style={{padding:"12px 16px",borderBottom:`0.5px solid #f3f3f3`,background:n.read?W:"#FAFAFE"}}>
+              <p style={{fontSize:13,color:"#111",lineHeight:1.5,margin:0}}>{n.message}</p>
+              <p style={{fontSize:11,color:FT,margin:"3px 0 0"}}>{new Date(n.createdAt).toLocaleString()}</p>
+            </div>
+          ))
+        }
+      </div>
+    </div>
+  );
+}
+
+function TaskCard({task,empId,onDone,onDelete,manager}){
+  const r=rl(task.dueDate,task.isDaily);
+  const s=tStatus(task,empId);
+  return(
+    <div style={card({borderLeft:!manager?`3px solid ${r.c}`:undefined,borderRadius:!manager?"0 12px 12px 0":12})}>
+      <div style={{display:"flex",justifyContent:"space-between",gap:10}}>
+        <div style={{flex:1,minWidth:0}}>
+          <div style={{display:"flex",flexWrap:"wrap",alignItems:"center",gap:3,marginBottom:5}}>
+            <span style={{fontWeight:700,fontSize:14,color:"#111"}}>{task.title}</span>
+            <Bdg t={r.t} c={r.c} b={r.b}/>
+            {task.isDaily&&<Bdg t="Daily" c={BD} b={BL}/>}
+          </div>
+          {task.desc&&<p style={{fontSize:13,color:MT,margin:"0 0 4px",lineHeight:1.45}}>{task.desc}</p>}
+          {!task.isDaily&&<p style={{fontSize:12,color:FT,margin:0}}>Due: {task.dueDate}</p>}
+          {s?.state==="rejected"&&s.comment&&(
+            <div style={{marginTop:8,padding:"8px 10px",background:RL,borderRadius:8}}>
+              <p style={{margin:0,fontSize:12,color:RD,fontWeight:700}}>Rejected: <span style={{fontWeight:400}}>{s.comment}</span></p>
             </div>
           )}
         </div>
-        <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:6,flexShrink:0}}>
-          {isManager ? (
+        <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:5,flexShrink:0}}>
+          {manager?(
             <>
-              <button style={S.btnD} onClick={onDelete}>Delete</button>
-              <span style={{fontSize:11,color:!st?"#aaa":st.state==="done"?C.greenD:st.state==="pending"?C.amberD:C.redD}}>
-                {!st?"Not started":st.state==="done"?"Approved":st.state==="pending"?"Awaiting":"Rejected"}
+              <button style={bd} onClick={onDelete}>Delete</button>
+              <span style={{fontSize:11,color:!s?FT:s.state==="done"?GD:s.state==="pending"?AD:RD}}>
+                {!s?"Not started":s.state==="done"?"Approved":s.state==="pending"?"Awaiting":"Rejected"}
               </span>
             </>
-          ) : (
+          ):(
             <>
-              {!st&&<button style={S.btnS} onClick={onMarkDone}>Mark done</button>}
-              {st?.state==="pending"  &&<Badge label="Awaiting approval" color={C.amberD} bg={C.amberL}/>}
-              {st?.state==="done"     &&<Badge label="✓ Approved"        color={C.greenD} bg={C.greenL}/>}
-              {st?.state==="rejected" &&<button style={S.btnA} onClick={onMarkDone}>Resubmit</button>}
+              {!s&&<button style={bs} onClick={onDone}>Mark done</button>}
+              {s?.state==="pending"  &&<Bdg t="Awaiting…" c={AD} b={AL}/>}
+              {s?.state==="done"     &&<Bdg t="✓ Approved" c={GD} b={GL}/>}
+              {s?.state==="rejected" &&<button style={ba} onClick={onDone}>Resubmit</button>}
             </>
           )}
         </div>
       </div>
     </div>
   );
-};
+}
 
-// ── Main App ──────────────────────────────────────────────────────────────────
-function App() {
-  const [appState, setAppState] = useState("loading"); // loading | config_error | conn_error | ready
-  const [users,   setUsers]   = useState({});
-  const [tasks,   setTasks]   = useState({});
-  const [notifs,  setNotifs]  = useState({});
-  const [user,    setUser]    = useState(null);
-  const [loginForm, setLoginForm] = useState({username:"",password:""});
-  const [loginErr,  setLoginErr]  = useState("");
-  const [showPw,  setShowPw]  = useState(false);
-  const [saving,  setSaving]  = useState(false);
-  const [tab,     setTab]     = useState("today");
-  const [filterEmp,   setFilterEmp]   = useState("all");
-  const [notifOpen,   setNotifOpen]   = useState(false);
-  const [addTaskOpen, setAddTaskOpen] = useState(false);
-  const [addEmpOpen,  setAddEmpOpen]  = useState(false);
-  const [rejectModal,       setRejectModal]       = useState(null);
-  const [deleteConfirm,     setDeleteConfirm]     = useState(null);
-  const [deactivateConfirm, setDeactivateConfirm] = useState(null);
-  const [newTask, setNewTask] = useState({title:"",desc:"",assignedTo:{},dueDate:addDays(1),isDaily:false});
-  const [newEmp,  setNewEmp]  = useState({name:"",username:"",password:""});
-  const [rejectComment, setRejectComment] = useState("");
-  const [formErr, setFormErr] = useState("");
+// ── App ───────────────────────────────────────────────────────────────────────
+function App(){
+  const [ready,   setReady]  = useState(false);
+  const [connErr, setConnErr]= useState(false);
+  const [users,   setUsers]  = useState({});
+  const [tasks,   setTasks]  = useState({});
+  const [notifs,  setNotifs] = useState({});
+  const [me,      setMe]     = useState(null);
+  const [form,    setForm]   = useState({u:"",p:""});
+  const [showPw,  setShowPw] = useState(false);
+  const [loginErr,setLoginErr]=useState("");
+  const [saving,  setSaving] = useState(false);
+  const [tab,     setTab]    = useState("today");
+  const [fEmp,    setFEmp]   = useState("all");
+  const [nOpen,   setNOpen]  = useState(false);
+  const [addT,    setAddT]   = useState(false);
+  const [addE,    setAddE]   = useState(false);
+  const [rejQ,    setRejQ]   = useState(null);
+  const [delQ,    setDelQ]   = useState(null);
+  const [deaQ,    setDeaQ]   = useState(null);
+  const [nt,setNt]=useState({title:"",desc:"",assignedTo:{},dueDate:addDays(1),isDaily:false});
+  const [ne,setNe]=useState({name:"",username:"",password:""});
+  const [rc,setRc]=useState("");
+  const [fe,setFe]=useState("");
 
-  // ── Bootstrap ──────────────────────────────────────────────────────────────
   useEffect(()=>{
-    if (FIREBASE_CONFIG.apiKey === "YOUR_API_KEY") { setAppState("config_error"); return; }
-    
-    // Test Firebase connection
-    const msg = document.getElementById("load-msg");
-    if(msg) msg.textContent = "Connecting to Firebase…";
-    
-    try { 
-      const testDB = getDB();
-      if(msg) msg.textContent = "Firebase connected, loading data…";
-    } catch(e) { 
-      console.error("Firebase init error:", e);
-      setAppState("conn_error"); 
-      return; 
-    }
+    setSplash("Connecting to database…");
 
-    // Set a timeout - if data doesn't load in 10s, show connection error
-    const timeout = setTimeout(()=>{
-      console.error("Firebase timeout - no data received after 10s");
-      setAppState("conn_error");
-    }, 10000);
+    // Timeout if no connection after 15s
+    const to=setTimeout(()=>{
+      if(!ready){ console.error("Firebase connection timeout"); setConnErr(true); hideSplash(); setReady(true); }
+    },15000);
 
-    seedIfEmpty()
-      .then(()=>{
-        if(msg) msg.textContent = "Loading app…";
-        const u1 = dbListen("users",        v => { console.log("users:", v); setUsers(v||{}); });
-        const u2 = dbListen("tasks",        v => { console.log("tasks:", v); setTasks(v||{}); clearTimeout(timeout); setAppState("ready"); });
-        const u3 = dbListen("notifications",v => setNotifs(v||{}));
-        return ()=>{ u1(); u2(); u3(); clearTimeout(timeout); };
-      })
-      .catch(e=>{ 
-        console.error("seedIfEmpty error:", e); 
-        clearTimeout(timeout);
-        setAppState("conn_error"); 
-      });
+    // Watch connection state
+    DB.ref(".info/connected").on("value",s=>{
+      if(s.val()) setSplash("Loading data…");
+    });
+
+    // Start listeners
+    const u1=dbWatch("users",   v=>setUsers(v||{}));
+    const u2=dbWatch("tasks",   v=>{ setTasks(v||{}); clearTimeout(to); setReady(true); hideSplash(); });
+    const u3=dbWatch("notifications",v=>setNotifs(v||{}));
+
+    return()=>{ u1();u2();u3(); clearTimeout(to); };
   },[]);
 
-  // ── Notify ─────────────────────────────────────────────────────────────────
-  const notify = async (userId, message) => {
-    const id=genId();
-    await dbSet(`notifications/${id}`,{id,userId,message,read:false,createdAt:new Date().toISOString()});
-  };
-
-  // ── Auth ───────────────────────────────────────────────────────────────────
-  function login() {
-    const u = Object.values(users).find(u=>u.username===loginForm.username&&u.passwordHash===hashPw(loginForm.password));
-    if (!u) { setLoginErr("Invalid username or password."); return; }
-    if (!u.active) { setLoginErr("Account deactivated. Contact your manager."); return; }
-    setUser(u); setLoginErr("");
-    // Mark notifications read
-    const updates={};
-    Object.entries(notifs).filter(([,n])=>n.userId===u.id&&!n.read).forEach(([id])=>updates[`notifications/${id}/read`]=true);
-    if(Object.keys(updates).length) dbMultiUpdate(updates).catch(()=>{});
+  async function push(uid,msg){
+    const id=uid_();
+    await dbSet("notifications/"+id,{id,userId:uid,message:msg,read:false,createdAt:new Date().toISOString()});
   }
-  function logout(){ setUser(null); setLoginForm({username:"",password:""}); setTab("today"); }
+  // rename uid to uid_ to avoid conflict with uid from outer scope
+  function uid_(){ try{return crypto.randomUUID()}catch{return Date.now().toString(36)+Math.random().toString(36).slice(2)} }
 
-  // ── Task actions ───────────────────────────────────────────────────────────
-  async function markDone(taskId, empId) {
+  function login(){
+    const u=Object.values(users).find(u=>u.username===form.u&&u.passwordHash===hashPw(form.p));
+    if(!u){setLoginErr("Wrong username or password.");return;}
+    if(!u.active){setLoginErr("Account deactivated. Contact your manager.");return;}
+    setMe(u);setLoginErr("");
+    const up={};
+    Object.entries(notifs).filter(([,n])=>n.userId===u.id&&!n.read).forEach(([id])=>up["notifications/"+id+"/read"]=true);
+    if(Object.keys(up).length) dbPatch(up).catch(()=>{});
+  }
+  function logout(){setMe(null);setForm({u:"",p:""});setTab("today");}
+
+  async function markDone(tid,eid){
     setSaving(true);
-    await dbUpdate(`tasks/${taskId}/statuses/${empId}`,{state:"pending",comment:"",dailyDate:todayStr()});
-    const t=tasks[taskId],e=users[empId];
-    if(t&&e) await notify("admin",`${e.name} submitted "${t.title}" for approval.`);
+    await dbUpd("tasks/"+tid+"/statuses/"+eid,{state:"pending",comment:"",dailyDate:today()});
+    const t=tasks[tid],e=users[eid];
+    if(t&&e) await push("admin",e.name+' submitted "'+t.title+'" for approval.');
     setSaving(false);
   }
-  async function approveTask(taskId, empId) {
+  async function approve(tid,eid){
     setSaving(true);
-    await dbUpdate(`tasks/${taskId}/statuses/${empId}`,{state:"done",comment:"",dailyDate:todayStr()});
-    const t=tasks[taskId];
-    if(t) await notify(empId,`✓ Your task "${t.title}" was approved.`);
+    await dbUpd("tasks/"+tid+"/statuses/"+eid,{state:"done",comment:"",dailyDate:today()});
+    const t=tasks[tid];
+    if(t) await push(eid,'✓ "'+t.title+'" was approved.');
     setSaving(false);
   }
-  async function doRejectTask() {
-    if(!rejectComment.trim()) return;
-    const {taskId,empId}=rejectModal;
+  async function reject(){
+    if(!rc.trim())return;
+    const{tid,eid}=rejQ; setSaving(true);
+    await dbUpd("tasks/"+tid+"/statuses/"+eid,{state:"rejected",comment:rc,dailyDate:today()});
+    const t=tasks[tid];
+    if(t) await push(eid,'"'+t.title+'" rejected: '+rc);
+    setRejQ(null);setRc("");setSaving(false);
+  }
+  async function delTask(id){ setSaving(true); await dbDel("tasks/"+id); setDelQ(null);setSaving(false); }
+  async function addTask(){
+    if(!nt.title.trim()){setFe("Title required.");return;}
+    if(!Object.keys(nt.assignedTo).length){setFe("Assign to at least one person.");return;}
     setSaving(true);
-    await dbUpdate(`tasks/${taskId}/statuses/${empId}`,{state:"rejected",comment:rejectComment,dailyDate:todayStr()});
-    const t=tasks[taskId];
-    if(t) await notify(empId,`✗ "${t.title}" rejected: "${rejectComment}"`);
-    setRejectModal(null); setRejectComment(""); setSaving(false);
+    const id=uid_();
+    await dbSet("tasks/"+id,{...nt,id,statuses:{},createdAt:new Date().toISOString(),createdBy:me.id});
+    for(const eid of Object.keys(nt.assignedTo)) await push(eid,'New task: "'+nt.title+'"');
+    setNt({title:"",desc:"",assignedTo:{},dueDate:addDays(1),isDaily:false});
+    setAddT(false);setFe("");setSaving(false);
   }
-  async function doDeleteTask(id) {
+  async function addEmp(){
+    if(!ne.name.trim()||!ne.username.trim()||!ne.password.trim()){setFe("All fields required.");return;}
+    if(Object.values(users).find(u=>u.username===ne.username)){setFe("Username taken.");return;}
+    if(ne.password.length<4){setFe("Password min 4 chars.");return;}
     setSaving(true);
-    await dbRemove(`tasks/${id}`);
-    setDeleteConfirm(null); setSaving(false);
+    const id=uid_();
+    await dbSet("users/"+id,{id,username:ne.username,passwordHash:hashPw(ne.password),name:ne.name,role:"employee",active:true,createdAt:new Date().toISOString()});
+    setNe({name:"",username:"",password:""});setAddE(false);setFe("");setSaving(false);
   }
-  async function doAddTask() {
-    if(!newTask.title.trim()){setFormErr("Task title is required.");return;}
-    if(!Object.keys(newTask.assignedTo).length){setFormErr("Assign to at least one employee.");return;}
-    setSaving(true);
-    const id=genId();
-    await dbSet(`tasks/${id}`,{...newTask,id,statuses:{},createdAt:new Date().toISOString(),createdBy:user.id});
-    for(const eid of Object.keys(newTask.assignedTo)) await notify(eid,`New task assigned: "${newTask.title}"`);
-    setNewTask({title:"",desc:"",assignedTo:{},dueDate:addDays(1),isDaily:false});
-    setAddTaskOpen(false); setFormErr(""); setSaving(false);
-  }
-  async function doAddEmployee() {
-    if(!newEmp.name.trim()||!newEmp.username.trim()||!newEmp.password.trim()){setFormErr("All fields required.");return;}
-    if(Object.values(users).find(u=>u.username===newEmp.username)){setFormErr("Username already taken.");return;}
-    if(newEmp.password.length<4){setFormErr("Password must be at least 4 characters.");return;}
-    setSaving(true);
-    const id=genId();
-    await dbSet(`users/${id}`,{id,username:newEmp.username,passwordHash:hashPw(newEmp.password),name:newEmp.name,role:"employee",active:true,createdAt:new Date().toISOString()});
-    setNewEmp({name:"",username:"",password:""}); setAddEmpOpen(false); setFormErr(""); setSaving(false);
-  }
-  async function doToggleDeactivate(empId) {
-    await dbUpdate(`users/${empId}`,{active:!users[empId].active});
-    setDeactivateConfirm(null);
-  }
-  async function clearNotifs() {
-    const updates={};
-    Object.entries(notifs).filter(([,n])=>n.userId===user.id).forEach(([id])=>updates[`notifications/${id}`]=null);
-    await dbMultiUpdate(updates);
+  async function toggleActive(eid){ await dbUpd("users/"+eid,{active:!users[eid].active}); setDeaQ(null); }
+  async function clearNotifs(){
+    const up={};
+    Object.entries(notifs).filter(([,n])=>n.userId===me.id).forEach(([id])=>up["notifications/"+id]=null);
+    await dbPatch(up);
   }
 
-  // ── Derived ────────────────────────────────────────────────────────────────
-  const taskList    = Object.values(tasks);
-  const employees   = Object.values(users).filter(u=>u.role==="employee");
-  const activeEmps  = employees.filter(e=>e.active);
-  const myNotifs    = user ? Object.values(notifs).filter(n=>n.userId===user.id).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)) : [];
-  const unread      = myNotifs.filter(n=>!n.read).length;
-  const empName     = id => users[id]?.name||"Unknown";
-  const getEmpTasks = id => taskList.filter(t=>t.assignedTo&&t.assignedTo[id]);
-  const filteredEmps= filterEmp==="all" ? activeEmps : activeEmps.filter(e=>e.id===filterEmp);
-  const overdueCount= taskList.filter(t=>!t.isDaily&&daysUntil(t.dueDate)<0).length;
-  const pendingApprovals = taskList.flatMap(t => {
-    if(!t.statuses) return [];
+  const tArr   = Object.values(tasks);
+  const emps   = Object.values(users).filter(u=>u.role==="employee");
+  const actE   = emps.filter(e=>e.active);
+  const myN    = me?Object.values(notifs).filter(n=>n.userId===me.id&&n.id!=="__init__").sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)):[];
+  const unread = myN.filter(n=>!n.read).length;
+  const eName  = id=>users[id]?.name||"?";
+  const eTasks = id=>tArr.filter(t=>t.assignedTo&&t.assignedTo[id]);
+  const shown  = fEmp==="all"?actE:actE.filter(e=>e.id===fEmp);
+  const overdue= tArr.filter(t=>!t.isDaily&&daysUntil(t.dueDate)<0).length;
+  const pending= tArr.flatMap(t=>{
+    if(!t.statuses)return[];
     return Object.entries(t.statuses)
-      .filter(([eid,s])=>!(t.isDaily&&s.dailyDate!==todayStr())&&s.state==="pending")
-      .map(([eid])=>({task:t,empId:eid}));
+      .filter(([,s])=>!(t.isDaily&&s.dailyDate!==today())&&s.state==="pending")
+      .map(([eid])=>({task:t,eid}));
   });
 
-  // ── State screens ──────────────────────────────────────────────────────────
-  if (appState==="loading") return null; // spinner in HTML handles this
+  if(!ready) return null;
 
-  if (appState==="config_error") return (
-    <div style={{minHeight:"100vh",background:C.bg,display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
-      <div style={{...S.card,maxWidth:420,padding:28,textAlign:"center"}}>
-        <div style={{fontSize:44,marginBottom:12}}>🔧</div>
-        <h2 style={{fontSize:18,fontWeight:700,margin:"0 0 10px"}}>Firebase not configured yet</h2>
-        <p style={{fontSize:14,color:C.muted,lineHeight:1.7,margin:"0 0 16px"}}>Open <code style={{background:"#f0f0f0",padding:"2px 6px",borderRadius:4}}>index.html</code> and replace the <strong>FIREBASE_CONFIG</strong> block at the top with your values from the Firebase Console.</p>
-        <div style={{background:"#f5f5f5",borderRadius:8,padding:14,textAlign:"left",fontSize:12,fontFamily:"monospace",lineHeight:2,color:"#333"}}>
-          apiKey: "YOUR_API_KEY",<br/>
-          authDomain: "…",<br/>
-          databaseURL: "…",<br/>
-          projectId: "…",<br/>
-          storageBucket: "…",<br/>
-          messagingSenderId: "…",<br/>
-          appId: "…"
-        </div>
-        <p style={{fontSize:12,color:C.faint,marginTop:14}}>See the setup instructions below.</p>
+  if(connErr) return(
+    <div style={{minHeight:"100vh",background:BG,display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
+      <div style={card({maxWidth:360,padding:28,textAlign:"center"})}>
+        <p style={{fontSize:36,marginBottom:12}}>📡</p>
+        <h2 style={{fontSize:17,fontWeight:700,marginBottom:10}}>Connection failed</h2>
+        <p style={{fontSize:13,color:MT,lineHeight:1.6,marginBottom:16}}>Could not connect to Firebase. Check internet connection and try again.</p>
+        <button style={{...bp,width:"100%"}} onClick={()=>window.location.reload()}>Retry</button>
       </div>
     </div>
   );
 
-  if (appState==="conn_error") return (
-    <div style={{minHeight:"100vh",background:C.bg,display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
-      <div style={{...S.card,maxWidth:360,padding:28,textAlign:"center"}}>
-        <div style={{fontSize:44,marginBottom:12}}>📡</div>
-        <h2 style={{fontSize:18,fontWeight:700,margin:"0 0 10px"}}>Connection failed</h2>
-        <p style={{fontSize:14,color:C.muted,lineHeight:1.6}}>Could not connect to Firebase. Check your internet and config, then retry.</p>
-        <button style={{...S.btnP,marginTop:16,width:"100%"}} onClick={()=>window.location.reload()}>Retry</button>
-      </div>
-    </div>
-  );
-
-  // ── Login screen ───────────────────────────────────────────────────────────
-  if (!user) return (
-    <div style={{minHeight:"100vh",background:C.bg,display:"flex",alignItems:"center",justifyContent:"center",padding:"20px 16px"}}>
+  if(!me) return(
+    <div style={{minHeight:"100vh",background:BG,display:"flex",alignItems:"center",justifyContent:"center",padding:"20px 16px"}}>
       <div style={{width:"100%",maxWidth:380}}>
-        <div style={{textAlign:"center",marginBottom:28}}>
-          <div style={{width:60,height:60,borderRadius:16,background:C.purple,display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 14px",fontSize:28,color:"#fff",fontWeight:700}}>✓</div>
-          <h1 style={{fontSize:24,fontWeight:800,margin:0,color:C.text}}>TaskFlow</h1>
-          <p style={{fontSize:14,color:C.muted,marginTop:6}}>Team task manager</p>
+        <div style={{textAlign:"center",marginBottom:24}}>
+          <div style={{width:62,height:62,borderRadius:17,background:P,display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 14px",fontSize:30,color:W,fontWeight:700}}>✓</div>
+          <h1 style={{fontSize:26,fontWeight:800,color:"#111"}}>TaskFlow</h1>
+          <p style={{fontSize:14,color:MT,marginTop:5}}>Team task manager</p>
         </div>
-        <div style={{...S.card,padding:24}}>
-          <label style={S.label}>Username</label>
-          <input style={S.input} value={loginForm.username} autoFocus
-            onChange={e=>setLoginForm(f=>({...f,username:e.target.value}))}
+        <div style={card({padding:24,borderRadius:16})}>
+          <label style={lbl}>Username</label>
+          <input style={inp} value={form.u} autoFocus
+            onChange={e=>setForm(f=>({...f,u:e.target.value}))}
             placeholder="Enter username" onKeyDown={e=>e.key==="Enter"&&login()}/>
-          <label style={S.label}>Password</label>
-          <div style={{position:"relative",marginBottom:10}}>
-            <input style={{...S.input,marginBottom:0,paddingRight:44}}
-              type={showPw?"text":"password"} value={loginForm.password}
-              onChange={e=>setLoginForm(f=>({...f,password:e.target.value}))}
+          <label style={lbl}>Password</label>
+          <div style={{position:"relative",marginBottom:loginErr?0:2}}>
+            <input style={{...inp,marginBottom:0,paddingRight:46}}
+              type={showPw?"text":"password"} value={form.p}
+              onChange={e=>setForm(f=>({...f,p:e.target.value}))}
               placeholder="Enter password" onKeyDown={e=>e.key==="Enter"&&login()}/>
-            <button onClick={()=>setShowPw(p=>!p)} style={{position:"absolute",right:10,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",fontSize:16,color:C.muted}}>{showPw?"🙈":"👁"}</button>
+            <button onClick={()=>setShowPw(v=>!v)}
+              style={{position:"absolute",right:12,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",fontSize:17,color:MT}}>
+              {showPw?"🙈":"👁"}
+            </button>
           </div>
-          {loginErr&&<p style={S.err}>{loginErr}</p>}
-          <button style={{...S.btnP,width:"100%",padding:12,fontSize:15}} onClick={login}>Sign in</button>
-          <div style={{marginTop:16,padding:"12px 14px",background:C.bg,borderRadius:8,fontSize:12,color:C.muted,lineHeight:1.8}}>
-            <strong>Manager:</strong> admin / admin123<br/>
-            <strong>Employees:</strong> emp1/pass1 · emp2/pass2 · emp3/pass3
+          {loginErr&&<p style={{...errS,marginTop:10}}>{loginErr}</p>}
+          <button style={{...bp,width:"100%",padding:13,fontSize:15,marginTop:12}} onClick={login}>Sign in</button>
+          <div style={{marginTop:14,padding:"10px 14px",background:BG,borderRadius:9,fontSize:12,color:MT,lineHeight:1.9}}>
+            <b>Manager:</b> admin / admin123<br/>
+            <b>Staff:</b> emp1/pass1 · emp2/pass2 · emp3/pass3
           </div>
         </div>
       </div>
     </div>
   );
 
-  // ── Shared header ──────────────────────────────────────────────────────────
-  const Header = () => (
-    <div style={{background:C.surface,borderBottom:`0.5px solid ${C.border}`,padding:"14px 16px",display:"flex",justifyContent:"space-between",alignItems:"center",position:"sticky",top:0,zIndex:50}}>
+  const Hdr=()=>(
+    <header style={{background:W,borderBottom:`0.5px solid ${BR}`,padding:"13px 16px",display:"flex",justifyContent:"space-between",alignItems:"center",position:"sticky",top:0,zIndex:100}}>
       <div style={{display:"flex",alignItems:"center",gap:10}}>
-        {user.role==="employee"&&<Avatar name={user.name}/>}
+        {me.role==="employee"&&<Av name={me.name}/>}
         <div>
-          <p style={{margin:0,fontSize:11,color:C.faint}}>{user.role==="master"?"Manager":"Employee"}</p>
-          <h2 style={{margin:0,fontSize:16,fontWeight:700,color:C.text}}>{user.role==="master"?"TaskFlow":user.name}</h2>
+          <p style={{fontSize:10,color:FT,margin:0}}>{me.role==="master"?"Manager":"Employee"}</p>
+          <h1 style={{fontSize:16,fontWeight:800,color:"#111",margin:0}}>{me.role==="master"?"TaskFlow":me.name}</h1>
         </div>
       </div>
       <div style={{display:"flex",gap:8,alignItems:"center"}}>
-        {saving&&<span style={{fontSize:11,color:C.muted}}>Saving…</span>}
-        <button style={{...S.btn,position:"relative",padding:"8px 11px",fontSize:18}} onClick={()=>setNotifOpen(true)}>
+        {saving&&<span style={{fontSize:11,color:MT}}>Saving…</span>}
+        <button style={{...bo,padding:"8px 11px",fontSize:19,position:"relative"}} onClick={()=>setNOpen(true)}>
           🔔
-          {unread>0&&<span style={{position:"absolute",top:2,right:2,background:C.red,color:"#fff",borderRadius:10,padding:"0 5px",fontSize:10,fontWeight:700,minWidth:15,textAlign:"center"}}>{unread>9?"9+":unread}</span>}
+          {unread>0&&<span style={{position:"absolute",top:2,right:2,background:Rd,color:W,borderRadius:10,padding:"0 5px",fontSize:9,fontWeight:700,minWidth:15,textAlign:"center",lineHeight:"15px"}}>{unread>9?"9+":unread}</span>}
         </button>
-        <button style={S.btn} onClick={logout}>Sign out</button>
+        <button style={bo} onClick={logout}>Sign out</button>
       </div>
-    </div>
+    </header>
   );
 
-  // ── Employee view ──────────────────────────────────────────────────────────
-  if (user.role==="employee") {
-    const myTasks       = getEmpTasks(user.id);
-    const todayTasks    = myTasks.filter(t=>shouldShowToday(t));
-    const upcomingTasks = myTasks.filter(t=>!t.isDaily&&daysUntil(t.dueDate)>1&&shouldRemind(t));
-    const doneCount     = myTasks.filter(t=>getStatus(t,user.id)?.state==="done").length;
-    return (
-      <div style={{background:C.bg,minHeight:"100vh",paddingBottom:80}}>
-        <Header/>
-        <div style={{padding:"16px 16px 0"}}>
-          <div style={S.row}>
-            {[{l:"Total",v:myTasks.length,c:C.purpleD,bg:C.purpleL},{l:"Today",v:todayTasks.length,c:C.amberD,bg:C.amberL},{l:"Done",v:doneCount,c:C.greenD,bg:C.greenL},{l:"Upcoming",v:upcomingTasks.length,c:C.blueD,bg:C.blueL}].map(x=>(
-              <div key={x.l} style={S.summ(x.c,x.bg)}><div style={{fontSize:22,fontWeight:800,color:x.c}}>{x.v}</div><div style={{fontSize:11,color:x.c,opacity:.85}}>{x.l}</div></div>
+  if(me.role==="employee"){
+    const mine  =eTasks(me.id);
+    const todays=mine.filter(t=>showToday(t));
+    const coming=mine.filter(t=>!t.isDaily&&daysUntil(t.dueDate)>1&&shouldRem(t));
+    const done  =mine.filter(t=>tStatus(t,me.id)?.state==="done").length;
+    return(
+      <div style={{background:BG,minHeight:"100vh",paddingBottom:80}}>
+        <Hdr/>
+        <div style={{padding:"14px 14px 0"}}>
+          <div style={{display:"flex",gap:8,marginBottom:14}}>
+            {[{l:"Total",v:mine.length,c:PD,b:PL},{l:"Today",v:todays.length,c:AD,b:AL},{l:"Done",v:done,c:GD,b:GL},{l:"Coming",v:coming.length,c:BD,b:BL}].map(x=>(
+              <div key={x.l} style={sc(x.c,x.b)}><div style={{fontSize:22,fontWeight:800,color:x.c}}>{x.v}</div><div style={{fontSize:10,color:x.c,opacity:.85}}>{x.l}</div></div>
             ))}
           </div>
         </div>
-        <div style={{padding:"0 16px"}}>
-          {tab==="today"&&(todayTasks.length===0
-            ?<div style={{textAlign:"center",padding:"50px 0",color:C.faint}}><div style={{fontSize:40}}>🎉</div><p style={{marginTop:10,fontSize:15}}>All caught up for today!</p></div>
-            :todayTasks.map(t=><TaskCard key={t.id} task={t} empId={user.id} onMarkDone={()=>markDone(t.id,user.id)} isManager={false}/>)
+        <div style={{padding:"0 14px"}}>
+          {tab==="today"&&(todays.length===0
+            ?<div style={{textAlign:"center",padding:"50px 0",color:FT}}><p style={{fontSize:38}}>🎉</p><p style={{marginTop:10}}>All caught up!</p></div>
+            :todays.map(t=><TaskCard key={t.id} task={t} empId={me.id} onDone={()=>markDone(t.id,me.id)} manager={false}/>)
           )}
-          {tab==="upcoming"&&(upcomingTasks.length===0
-            ?<div style={{textAlign:"center",padding:"50px 0",color:C.faint}}><div style={{fontSize:40}}>📅</div><p style={{marginTop:10,fontSize:15}}>No upcoming reminders.</p></div>
-            :upcomingTasks.map(t=><TaskCard key={t.id} task={t} empId={user.id} onMarkDone={()=>markDone(t.id,user.id)} isManager={false}/>)
+          {tab==="upcoming"&&(coming.length===0
+            ?<div style={{textAlign:"center",padding:"50px 0",color:FT}}><p style={{fontSize:38}}>📅</p><p style={{marginTop:10}}>Nothing upcoming.</p></div>
+            :coming.map(t=><TaskCard key={t.id} task={t} empId={me.id} onDone={()=>markDone(t.id,me.id)} manager={false}/>)
           )}
         </div>
-        <BottomNav role="employee" tab={tab} setTab={setTab}/>
-        {notifOpen&&<NotifDrawer notifs={myNotifs} onClear={clearNotifs} onClose={()=>setNotifOpen(false)}/>}
+        <BottomNav role="employee" tab={tab} go={setTab} badge={0}/>
+        {nOpen&&<NotifPanel notifs={myN} onClear={clearNotifs} onClose={()=>setNOpen(false)}/>}
       </div>
     );
   }
 
-  // ── Manager view ───────────────────────────────────────────────────────────
-  return (
-    <div style={{background:C.bg,minHeight:"100vh",paddingBottom:80}}>
-      <Header/>
-      <div style={{padding:"16px 16px 0"}}>
-        <div style={S.row}>
-          {[{l:"Tasks",v:taskList.length,c:C.purpleD,bg:C.purpleL},{l:"Pending",v:pendingApprovals.length,c:C.amberD,bg:C.amberL},{l:"Overdue",v:overdueCount,c:C.redD,bg:C.redL},{l:"Team",v:activeEmps.length,c:C.blueD,bg:C.blueL}].map(x=>(
-            <div key={x.l} style={S.summ(x.c,x.bg)}><div style={{fontSize:22,fontWeight:800,color:x.c}}>{x.v}</div><div style={{fontSize:11,color:x.c,opacity:.85}}>{x.l}</div></div>
+  return(
+    <div style={{background:BG,minHeight:"100vh",paddingBottom:80}}>
+      <Hdr/>
+      <div style={{padding:"14px 14px 0"}}>
+        <div style={{display:"flex",gap:8,marginBottom:14}}>
+          {[{l:"Tasks",v:tArr.length,c:PD,b:PL},{l:"Pending",v:pending.length,c:AD,b:AL},{l:"Overdue",v:overdue,c:RD,b:RL},{l:"Team",v:actE.length,c:BD,b:BL}].map(x=>(
+            <div key={x.l} style={sc(x.c,x.b)}><div style={{fontSize:22,fontWeight:800,color:x.c}}>{x.v}</div><div style={{fontSize:10,color:x.c,opacity:.85}}>{x.l}</div></div>
           ))}
         </div>
       </div>
 
-      <div style={{padding:"0 16px"}}>
+      <div style={{padding:"0 14px"}}>
         {(tab==="today"||tab==="all")&&<>
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14,flexWrap:"wrap",gap:8}}>
-            <select style={{padding:"8px 10px",borderRadius:8,border:`0.5px solid ${C.border}`,fontSize:13,background:C.surface}} value={filterEmp} onChange={e=>setFilterEmp(e.target.value)}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12,gap:8,flexWrap:"wrap"}}>
+            <select style={{padding:"8px 10px",borderRadius:8,border:`1px solid ${BR}`,fontSize:13,background:W}} value={fEmp} onChange={e=>setFEmp(e.target.value)}>
               <option value="all">All employees</option>
-              {activeEmps.map(e=><option key={e.id} value={e.id}>{e.name}</option>)}
+              {actE.map(e=><option key={e.id} value={e.id}>{e.name}</option>)}
             </select>
-            <button style={S.btnP} onClick={()=>{setFormErr("");setAddTaskOpen(true);}}>+ Add task</button>
+            <button style={bp} onClick={()=>{setFe("");setAddT(true);}}>+ Add task</button>
           </div>
-          {filteredEmps.map(emp=>{
-            const empTasks = tab==="today" ? getEmpTasks(emp.id).filter(t=>shouldShowToday(t)) : getEmpTasks(emp.id);
-            return (
-              <div key={emp.id} style={{marginBottom:20}}>
-                <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
-                  <Avatar name={emp.name} size={28}/>
-                  <span style={{fontSize:14,fontWeight:700,color:"#444"}}>{emp.name}</span>
-                  <span style={{fontSize:12,color:C.faint}}>@{emp.username}</span>
+          {shown.map(emp=>{
+            const et=tab==="today"?eTasks(emp.id).filter(t=>showToday(t)):eTasks(emp.id);
+            return(
+              <div key={emp.id} style={{marginBottom:18}}>
+                <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:7}}>
+                  <Av name={emp.name} size={26}/><span style={{fontSize:14,fontWeight:700,color:"#333"}}>{emp.name}</span><span style={{fontSize:12,color:FT}}>@{emp.username}</span>
                 </div>
-                {empTasks.length===0 ? <p style={{fontSize:13,color:C.faint,marginLeft:36}}>No tasks.</p>
-                  : empTasks.map(t=><div key={t.id} style={{marginLeft:36}}><TaskCard task={t} empId={emp.id} onDelete={()=>setDeleteConfirm(t.id)} isManager={true}/></div>)}
+                {et.length===0?<p style={{fontSize:13,color:FT,marginLeft:34}}>No tasks.</p>
+                  :et.map(t=><div key={t.id} style={{marginLeft:34}}><TaskCard task={t} empId={emp.id} onDelete={()=>setDelQ(t.id)} manager={true}/></div>)}
               </div>
             );
           })}
         </>}
 
         {tab==="approvals"&&<>
-          <h3 style={{fontSize:15,fontWeight:700,marginBottom:14}}>Pending approvals</h3>
-          {pendingApprovals.length===0
-            ?<div style={{textAlign:"center",padding:"40px 0",color:C.faint}}><div style={{fontSize:36}}>✅</div><p style={{marginTop:10}}>No pending approvals.</p></div>
-            :pendingApprovals.map(({task,empId})=>(
-              <div key={`${task.id}-${empId}`} style={S.card}>
-                <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:10,flexWrap:"wrap"}}>
-                  <div style={{display:"flex",alignItems:"center",gap:10}}>
-                    <Avatar name={empName(empId)} size={34}/>
-                    <div>
-                      <p style={{margin:0,fontWeight:700,fontSize:14}}>{task.title}</p>
-                      <p style={{margin:"3px 0 0",fontSize:13,color:C.muted}}>{empName(empId)}{!task.isDaily&&` · Due ${task.dueDate}`}</p>
-                    </div>
+          <h2 style={{fontSize:15,fontWeight:700,marginBottom:14,color:"#111"}}>Pending approvals</h2>
+          {pending.length===0
+            ?<div style={{textAlign:"center",padding:"40px 0",color:FT}}><p style={{fontSize:34}}>✅</p><p style={{marginTop:10}}>All clear!</p></div>
+            :pending.map(({task,eid})=>(
+              <div key={task.id+"-"+eid} style={card()}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:10}}>
+                  <div style={{display:"flex",gap:10,alignItems:"center"}}>
+                    <Av name={eName(eid)} size={34}/>
+                    <div><p style={{margin:0,fontWeight:700,fontSize:14}}>{task.title}</p><p style={{margin:"3px 0 0",fontSize:13,color:MT}}>{eName(eid)}{!task.isDaily?" · Due "+task.dueDate:""}</p></div>
                   </div>
                   <div style={{display:"flex",gap:8}}>
-                    <button style={S.btnS} onClick={()=>approveTask(task.id,empId)}>Approve</button>
-                    <button style={S.btnD} onClick={()=>{setRejectModal({taskId:task.id,empId});setRejectComment("");}}>Reject</button>
+                    <button style={bs} onClick={()=>approve(task.id,eid)}>Approve</button>
+                    <button style={bd} onClick={()=>{setRejQ({tid:task.id,eid});setRc("");}}>Reject</button>
                   </div>
                 </div>
               </div>
@@ -615,30 +532,27 @@ function App() {
           }
         </>}
 
-        {tab==="employees"&&<>
+        {tab==="team"&&<>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
-            <h3 style={{fontSize:15,fontWeight:700,margin:0}}>Team</h3>
-            <button style={S.btnP} onClick={()=>{setFormErr("");setAddEmpOpen(true);}}>+ Add</button>
+            <h2 style={{fontSize:15,fontWeight:700,color:"#111",margin:0}}>Team</h2>
+            <button style={bp} onClick={()=>{setFe("");setAddE(true);}}>+ Add</button>
           </div>
-          {employees.map(emp=>{
-            const total  =getEmpTasks(emp.id).length;
-            const done   =taskList.filter(t=>t.assignedTo&&t.assignedTo[emp.id]&&getStatus(t,emp.id)?.state==="done").length;
-            const pending=taskList.filter(t=>t.assignedTo&&t.assignedTo[emp.id]&&getStatus(t,emp.id)?.state==="pending").length;
-            return (
-              <div key={emp.id} style={{...S.card,opacity:emp.active?1:.55}}>
+          {emps.map(emp=>{
+            const tot=eTasks(emp.id).length;
+            const dn=tArr.filter(t=>t.assignedTo&&t.assignedTo[emp.id]&&tStatus(t,emp.id)?.state==="done").length;
+            const pn=tArr.filter(t=>t.assignedTo&&t.assignedTo[emp.id]&&tStatus(t,emp.id)?.state==="pending").length;
+            return(
+              <div key={emp.id} style={card({opacity:emp.active?1:.5})}>
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:8}}>
                   <div style={{display:"flex",alignItems:"center",gap:12}}>
-                    <Avatar name={emp.name} size={42}/>
-                    <div>
-                      <p style={{margin:0,fontWeight:700,fontSize:14}}>{emp.name}</p>
-                      <p style={{margin:"2px 0 0",fontSize:12,color:C.muted}}>@{emp.username}{!emp.active&&" · Deactivated"}</p>
-                    </div>
+                    <Av name={emp.name} size={42}/>
+                    <div><p style={{margin:0,fontWeight:700,fontSize:14}}>{emp.name}</p><p style={{margin:"2px 0 0",fontSize:12,color:MT}}>@{emp.username}{!emp.active?" · Deactivated":""}</p></div>
                   </div>
                   <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
-                    <Badge label={`${total} tasks`} color={C.blueD}  bg={C.blueL}/>
-                    <Badge label={`${done} done`}   color={C.greenD} bg={C.greenL}/>
-                    {pending>0&&<Badge label={`${pending} pending`} color={C.amberD} bg={C.amberL}/>}
-                    <button style={{...S.btn,fontSize:12,padding:"6px 12px"}} onClick={()=>emp.active?setDeactivateConfirm(emp.id):doToggleDeactivate(emp.id)}>
+                    <Bdg t={tot+" tasks"} c={BD} b={BL}/>
+                    <Bdg t={dn+" done"} c={GD} b={GL}/>
+                    {pn>0&&<Bdg t={pn+" pending"} c={AD} b={AL}/>}
+                    <button style={{...bo,fontSize:12,padding:"5px 12px"}} onClick={()=>emp.active?setDeaQ(emp.id):toggleActive(emp.id)}>
                       {emp.active?"Deactivate":"Reactivate"}
                     </button>
                   </div>
@@ -649,88 +563,92 @@ function App() {
         </>}
       </div>
 
-      <BottomNav role="master" tab={tab} setTab={setTab} badge={pendingApprovals.length}/>
-      {notifOpen&&<NotifDrawer notifs={myNotifs} onClear={clearNotifs} onClose={()=>setNotifOpen(false)}/>}
+      <BottomNav role="master" tab={tab} go={setTab} badge={pending.length}/>
+      {nOpen&&<NotifPanel notifs={myN} onClear={clearNotifs} onClose={()=>setNOpen(false)}/>}
 
-      {/* Modals */}
-      {addTaskOpen&&(
-        <Modal title="Add new task" onClose={()=>setAddTaskOpen(false)}>
-          {formErr&&<p style={S.err}>{formErr}</p>}
-          <label style={S.label}>Task title *</label>
-          <input style={S.input} value={newTask.title} autoFocus onChange={e=>setNewTask(t=>({...t,title:e.target.value}))} placeholder="e.g. Submit daily report"/>
-          <label style={S.label}>Description</label>
-          <textarea style={S.textarea} value={newTask.desc} onChange={e=>setNewTask(t=>({...t,desc:e.target.value}))} placeholder="Instructions for the employee"/>
-          <label style={S.label}>Due date</label>
-          <input style={{...S.input,marginBottom:8}} type="date" value={newTask.dueDate} onChange={e=>setNewTask(t=>({...t,dueDate:e.target.value}))}/>
-          <label style={{display:"flex",alignItems:"center",gap:8,fontSize:13,marginBottom:14,cursor:"pointer"}}>
-            <input type="checkbox" checked={newTask.isDaily} onChange={e=>setNewTask(t=>({...t,isDaily:e.target.checked}))}/>
-            Recurring daily task
-          </label>
-          <label style={S.label}>Assign to *</label>
-          <div style={{marginBottom:16}}>
-            {activeEmps.map(e=>(
-              <label key={e.id} style={{display:"flex",alignItems:"center",gap:10,marginBottom:10,cursor:"pointer",fontSize:14}}>
-                <input type="checkbox" style={{width:18,height:18}} checked={!!newTask.assignedTo[e.id]}
-                  onChange={()=>setNewTask(t=>{const a={...t.assignedTo};a[e.id]?delete a[e.id]:a[e.id]=true;return{...t,assignedTo:a};})}/>
-                <Avatar name={e.name} size={24}/>{e.name}
-              </label>
-            ))}
-          </div>
-          <div style={{display:"flex",gap:10}}>
-            <button style={S.btnP} onClick={doAddTask}>{saving?"Saving…":"Add task"}</button>
-            <button style={S.btn}  onClick={()=>setAddTaskOpen(false)}>Cancel</button>
-          </div>
-        </Modal>
-      )}
-      {addEmpOpen&&(
-        <Modal title="Add employee" onClose={()=>setAddEmpOpen(false)}>
-          {formErr&&<p style={S.err}>{formErr}</p>}
-          <label style={S.label}>Full name *</label>
-          <input style={S.input} value={newEmp.name} autoFocus onChange={e=>setNewEmp(n=>({...n,name:e.target.value}))} placeholder="e.g. Ananya Singh"/>
-          <label style={S.label}>Username *</label>
-          <input style={S.input} value={newEmp.username} onChange={e=>setNewEmp(n=>({...n,username:e.target.value}))} placeholder="e.g. ananya"/>
-          <label style={S.label}>Password * (min 4 chars)</label>
-          <input style={S.input} type="password" value={newEmp.password} onChange={e=>setNewEmp(n=>({...n,password:e.target.value}))} placeholder="Set a password"/>
-          <div style={{display:"flex",gap:10,marginTop:4}}>
-            <button style={S.btnP} onClick={doAddEmployee}>{saving?"Saving…":"Add employee"}</button>
-            <button style={S.btn}  onClick={()=>setAddEmpOpen(false)}>Cancel</button>
-          </div>
-        </Modal>
-      )}
-      {rejectModal&&(
-        <Modal title="Reject task" onClose={()=>setRejectModal(null)}>
-          <p style={{fontSize:14,color:C.muted,marginTop:0}}>Tell the employee what needs to be fixed.</p>
-          <label style={S.label}>Reason *</label>
-          <textarea style={S.textarea} value={rejectComment} autoFocus onChange={e=>setRejectComment(e.target.value)} placeholder="e.g. Missing Q3 figures. Please include all months."/>
-          <div style={{display:"flex",gap:10}}>
-            <button style={S.btnD} onClick={doRejectTask}>{saving?"Saving…":"Reject"}</button>
-            <button style={S.btn}  onClick={()=>setRejectModal(null)}>Cancel</button>
-          </div>
-        </Modal>
-      )}
-      {deleteConfirm&&(
-        <Modal title="Delete task?" onClose={()=>setDeleteConfirm(null)}>
-          <p style={{fontSize:14,color:C.muted,marginTop:0}}>Removes the task for all employees. Cannot be undone.</p>
-          <div style={{display:"flex",gap:10}}>
-            <button style={S.btnD} onClick={()=>doDeleteTask(deleteConfirm)}>{saving?"Deleting…":"Delete"}</button>
-            <button style={S.btn}  onClick={()=>setDeleteConfirm(null)}>Cancel</button>
-          </div>
-        </Modal>
-      )}
-      {deactivateConfirm&&(
-        <Modal title="Deactivate employee?" onClose={()=>setDeactivateConfirm(null)}>
-          <p style={{fontSize:14,color:C.muted,marginTop:0}}><strong>{empName(deactivateConfirm)}</strong> won't be able to sign in. History preserved. Reactivate anytime.</p>
-          <div style={{display:"flex",gap:10}}>
-            <button style={S.btnD} onClick={()=>doToggleDeactivate(deactivateConfirm)}>Deactivate</button>
-            <button style={S.btn}  onClick={()=>setDeactivateConfirm(null)}>Cancel</button>
-          </div>
-        </Modal>
-      )}
+      {addT&&<Sheet title="Add new task" onClose={()=>setAddT(false)}>
+        {fe&&<p style={errS}>{fe}</p>}
+        <label style={lbl}>Title *</label>
+        <input style={inp} value={nt.title} autoFocus onChange={e=>setNt(t=>({...t,title:e.target.value}))} placeholder="e.g. Submit daily report"/>
+        <label style={lbl}>Description</label>
+        <textarea style={{...inp,minHeight:76,resize:"vertical"}} value={nt.desc} onChange={e=>setNt(t=>({...t,desc:e.target.value}))} placeholder="Instructions for the employee"/>
+        <label style={lbl}>Due date</label>
+        <input style={{...inp,marginBottom:8}} type="date" value={nt.dueDate} onChange={e=>setNt(t=>({...t,dueDate:e.target.value}))}/>
+        <label style={{display:"flex",alignItems:"center",gap:8,fontSize:14,marginBottom:14,cursor:"pointer"}}>
+          <input type="checkbox" checked={nt.isDaily} onChange={e=>setNt(t=>({...t,isDaily:e.target.checked}))}/> Recurring daily task
+        </label>
+        <label style={lbl}>Assign to *</label>
+        <div style={{marginBottom:18}}>
+          {actE.map(e=>(
+            <label key={e.id} style={{display:"flex",alignItems:"center",gap:10,marginBottom:10,cursor:"pointer",fontSize:14}}>
+              <input type="checkbox" style={{width:18,height:18}} checked={!!nt.assignedTo[e.id]}
+                onChange={()=>setNt(t=>{const a={...t.assignedTo};a[e.id]?delete a[e.id]:a[e.id]=true;return{...t,assignedTo:a};})}/>
+              <Av name={e.name} size={22}/>{e.name}
+            </label>
+          ))}
+        </div>
+        <div style={{display:"flex",gap:10}}>
+          <button style={{...bp,flex:1}} onClick={addTask}>{saving?"Saving…":"Add task"}</button>
+          <button style={bo} onClick={()=>setAddT(false)}>Cancel</button>
+        </div>
+      </Sheet>}
+
+      {addE&&<Sheet title="Add employee" onClose={()=>setAddE(false)}>
+        {fe&&<p style={errS}>{fe}</p>}
+        <label style={lbl}>Full name *</label>
+        <input style={inp} value={ne.name} autoFocus onChange={e=>setNe(n=>({...n,name:e.target.value}))} placeholder="e.g. Ananya Singh"/>
+        <label style={lbl}>Username *</label>
+        <input style={inp} value={ne.username} onChange={e=>setNe(n=>({...n,username:e.target.value}))} placeholder="e.g. ananya"/>
+        <label style={lbl}>Password * (min 4 chars)</label>
+        <input style={inp} type="password" value={ne.password} onChange={e=>setNe(n=>({...n,password:e.target.value}))} placeholder="Set a password"/>
+        <div style={{display:"flex",gap:10,marginTop:4}}>
+          <button style={{...bp,flex:1}} onClick={addEmp}>{saving?"Saving…":"Add employee"}</button>
+          <button style={bo} onClick={()=>setAddE(false)}>Cancel</button>
+        </div>
+      </Sheet>}
+
+      {rejQ&&<Sheet title="Reject task" onClose={()=>setRejQ(null)}>
+        <p style={{fontSize:14,color:MT,marginBottom:14}}>Tell the employee what needs to be fixed.</p>
+        <label style={lbl}>Reason *</label>
+        <textarea style={{...inp,minHeight:90}} value={rc} autoFocus onChange={e=>setRc(e.target.value)} placeholder="e.g. Missing Q3 data. Please resubmit."/>
+        <div style={{display:"flex",gap:10}}>
+          <button style={{...bd,flex:1,padding:11}} onClick={reject}>{saving?"Saving…":"Reject"}</button>
+          <button style={bo} onClick={()=>setRejQ(null)}>Cancel</button>
+        </div>
+      </Sheet>}
+
+      {delQ&&<Sheet title="Delete this task?" onClose={()=>setDelQ(null)}>
+        <p style={{fontSize:14,color:MT,marginBottom:20}}>Removes it for all employees. Cannot be undone.</p>
+        <div style={{display:"flex",gap:10}}>
+          <button style={{...bd,flex:1,padding:11}} onClick={()=>delTask(delQ)}>{saving?"Deleting…":"Delete"}</button>
+          <button style={bo} onClick={()=>setDelQ(null)}>Cancel</button>
+        </div>
+      </Sheet>}
+
+      {deaQ&&<Sheet title="Deactivate employee?" onClose={()=>setDeaQ(null)}>
+        <p style={{fontSize:14,color:MT,marginBottom:20}}><b>{eName(deaQ)}</b> won't be able to sign in. History is preserved. Reactivate anytime.</p>
+        <div style={{display:"flex",gap:10}}>
+          <button style={{...bd,flex:1,padding:11}} onClick={()=>toggleActive(deaQ)}>Deactivate</button>
+          <button style={bo} onClick={()=>setDeaQ(null)}>Cancel</button>
+        </div>
+      </Sheet>}
     </div>
   );
 }
 
-ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+ReactDOM.createRoot(document.getElementById("app")).render(<App/>);
 </script>
+
+<!-- Install banner -->
+<div id="ib" style="display:none;position:fixed;bottom:0;left:0;right:0;background:#7F77DD;color:#fff;padding:14px 16px;z-index:9999;align-items:center;justify-content:space-between;gap:12px;box-shadow:0 -2px 12px rgba(0,0,0,.2);">
+  <div style="display:flex;align-items:center;gap:10px;">
+    <span style="font-size:24px;">✓</span>
+    <div><p style="margin:0;font-weight:700;font-size:14px;">Install TaskFlow</p><p style="margin:0;font-size:12px;opacity:.85;">Add to home screen</p></div>
+  </div>
+  <div style="display:flex;gap:8px;">
+    <button onclick="installApp()" style="background:#fff;color:#7F77DD;border:none;padding:8px 16px;border-radius:8px;font-weight:700;font-size:13px;cursor:pointer;">Install</button>
+    <button onclick="document.getElementById('ib').style.display='none'" style="background:rgba(255,255,255,.2);color:#fff;border:none;padding:8px 12px;border-radius:8px;font-size:16px;cursor:pointer;">✕</button>
+  </div>
+</div>
 </body>
 </html>
